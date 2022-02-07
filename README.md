@@ -8,6 +8,11 @@ Three simulated datasets come from the professor Cristian (Román Palacios et al
 
 Román Palacios, C., Carroll, H., Arnold, A., Flores, R., Petersen, S., McKinnon, K., & Tripati, A. (2021). BayClump: Bayesian Calibration and Temperature Reconstructions for Clumped Isotope Thermometry. Earth and Space Science Open Archive, 40. https://doi.org/10.1002/essoar.10507995.1 
 
+Response variable: D47
+Independent variable: 10^6/T^2
+True slope: 0.0369
+True intercept: 0.268
+
 ## Baseline Models (Due: February 25<sub>th</sub>)
 *Ordinary least squares linear regression*：OLS is for estimating coefficients of linear regression that describe the relationship between one or more independent variables and one dependent variable. 
 
