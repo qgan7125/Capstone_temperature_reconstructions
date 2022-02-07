@@ -7,28 +7,29 @@ We expect to improve the basic toolbox for inferring temperature reconstructions
 Three simulated datasets come from the professor Cristian (Román Palacios et al., 2021)
 
 Román Palacios, C., Carroll, H., Arnold, A., Flores, R., Petersen, S., McKinnon, K., & Tripati, A. (2021). BayClump: Bayesian Calibration and Temperature Reconstructions for Clumped Isotope Thermometry. Earth and Space Science Open Archive, 40. https://doi.org/10.1002/essoar.10507995.1 
-
+```
 Response variable: D47
 Independent variable: 10^6/T^2
 True slope: 0.0369
 True intercept: 0.268
+```
 
 ## Baseline Models (Due: February 25<sub>th</sub>)
-*Ordinary least squares linear regression*：OLS is for estimating coefficients of linear regression that describe the relationship between one or more independent variables and one dependent variable. 
+***Ordinary least squares linear regression***：OLS is for estimating coefficients of linear regression that describe the relationship between one or more independent variables and one dependent variable. 
 
-*Deming regression*：An errors-in-variables model which tries to find the line of best fit for a two-dimensional dataset. 
+***Deming regression***：An errors-in-variables model which tries to find the line of best fit for a two-dimensional dataset. 
 
-*Bayesian linear model*：Bayesian linear model estimates and updates regression parameters based on prior studies and newly generated clumped isotope data.
+***Bayesian linear model***：Bayesian linear model estimates and updates regression parameters based on prior studies and newly generated clumped isotope data.
 
 ## New Explored Models (Due: March 15<sub>th</sub>)
-*Orthogonal distance regression models* ：Finding the maximum likelihood estimators of parameters in measurement error models in the case of normally distributed errors.
+***Orthogonal distance regression models*** ：Finding the maximum likelihood estimators of parameters in measurement error models in the case of normally distributed errors.
 
-*Theil-Sen regression*：A non-parametric method which means it makes no assumption about the underlying distribution of the data. The estimation of the model is done by calculating the slopes and intercepts of a subpopulation of all possible combinations of p subsample points.
+***Theil-Sen regression***：A non-parametric method which means it makes no assumption about the underlying distribution of the data. The estimation of the model is done by calculating the slopes and intercepts of a subpopulation of all possible combinations of p subsample points.
 
-*Huber Regression*：A regression model that is robust to outliers. The idea is to use different loss functions rather than the traditional least squares.
+***Huber Regression***：A regression model that is robust to outliers. The idea is to use different loss functions rather than the traditional least squares.
 
-*Elastic-net regression*: A linear regression model using combinations of two popular penalties, specifically the L1 and L2 penalty functions.
+***Elastic-net regression***: A linear regression model using combinations of two popular penalties, specifically the L1 and L2 penalty functions.
 
-*Quantile Regression*: Estimates the median or other quantiles of y conditional on x, while ordinary least squares (OLS) estimates the conditional mean.
+***Quantile Regression***: Estimates the median or other quantiles of y conditional on x, while ordinary least squares (OLS) estimates the conditional mean.
 
-*Generalized Linear Regression*: a flexible generalization of ordinary linear regression. The GLM generalized linear regression by allowing the linear model to be related to the response variable via a link function and by allowing the magnitude of the variance of each measurement to be a function of its predicted value.
+***Generalized Linear Regression***: a flexible generalization of ordinary linear regression. The GLM generalized linear regression by allowing the linear model to be related to the response variable via a link function and by allowing the magnitude of the variance of each measurement to be a function of its predicted value.
