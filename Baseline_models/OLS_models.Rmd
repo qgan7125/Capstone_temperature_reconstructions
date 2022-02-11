@@ -11,10 +11,10 @@ output:
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 
 library(tidyverse)
-library(knitr)
 library(dplyr)
 library(ggplot2)
 library(boot)
+library(gridExtra)
 ```
 
 ## load data in
@@ -60,8 +60,9 @@ results_Intercept <- boot(data=data_low,
 
 plot(results_Intercept)
 
+median_Intercept_low <- median(results_Intercept$t)
 print(boot.ci(results_Intercept, type="bca"))
-cat("Mean Intercept:", mean(results_Intercept$t))
+cat("Mean Intercept:", median_Intercept_low)
 
 
 ```
@@ -79,9 +80,130 @@ results_Slope <- boot(data=data_low,
 
 plot(results_Slope)
 
+median_Slope_low <- median(results_Slope$t)
+
 print(boot.ci(results_Slope, type="bca"))
-cat("Mean Slope:", mean(results_Slope$t))
+cat("Mean Slope:", median_Slope_low)
+
+```
+
+## Intermediate error bootstrapping results
+
+### Intercept for Intermediate error
+```{r}
+
+# set seed for production
+set.seed(1234)
+
+# bootstrapping with 1000 replications
+results_Intercept <- boot(data=data_intermediate, 
+                statistic=OLS_Intercept,
+                R=1000,
+                formula=D47~Temperature)
+
+plot(results_Intercept)
+
+median_Intercept_Intermediate <- median(results_Intercept$t)
+
+print(boot.ci(results_Intercept, type="bca"))
+cat("Mean Intercept:", median_Intercept_Intermediate)
 
 
 ```
 
+### Slope for Intermediate error
+```{r}
+# use the same seed to keep same results
+set.seed(1234)
+
+# bootstrapping with 1000 replications
+results_Slope <- boot(data=data_intermediate, 
+                statistic=OLS_slope,
+                R=1000,
+                formula=D47~Temperature)
+
+plot(results_Slope)
+
+median_Slope_Intermediate <- median(results_Slope$t)
+
+print(boot.ci(results_Slope, type="bca"))
+cat("Mean Slope:", median_Slope_Intermediate)
+
+```
+
+## High error bootstrapping results
+
+### Intercept for high error
+```{r}
+
+# set seed for production
+set.seed(1234)
+
+# bootstrapping with 1000 replications
+results_Intercept <- boot(data=data_high, 
+                statistic=OLS_Intercept,
+                R=1000,
+                formula=D47~Temperature)
+
+plot(results_Intercept)
+
+median_Intercept_high <- median(results_Intercept$t)
+print(boot.ci(results_Intercept, type="bca"))
+cat("Mean Intercept:", median_Intercept_high)
+
+
+```
+
+### Slope for high error
+```{r}
+# use the same seed to keep same results
+set.seed(1234)
+
+# bootstrapping with 1000 replications
+results_Slope <- boot(data=data_high, 
+                statistic=OLS_slope,
+                R=1000,
+                formula=D47~Temperature)
+
+plot(results_Slope)
+
+median_Slope_high <- median(results_Slope$t)
+
+print(boot.ci(results_Slope, type="bca"))
+cat("Mean Slope:", median_Slope_high)
+
+```
+
+
+## Median slopes/intercepts VS true parameters
+```{r}
+# integrate variables into the lists
+DataNames <- c('Low', 'Intermediate', 'High', 'True')
+Slopes <- c(median_Slope_low, median_Slope_Intermediate, median_Slope_high, 0.0369)
+Intercepts <- c(median_Intercept_low, median_Intercept_Intermediate, median_Intercept_high, 0.268)
+
+OLS_results <- do.call(rbind, Map(data.frame, name=DataNames, Slopes=Slopes, Intercepts=Intercepts))
+
+Slopes_plot <- OLS_results %>% 
+  ggplot(aes(x = name, y = Slopes,fill = name)) +
+  geom_col() +
+  geom_text(aes(label = round(Slopes, 4), y = Slopes + 0.005)) +
+  labs(x = "Error Level",
+       y = "Median Slope",
+       fill = "Error Level")
+
+Intercepts_plot <- OLS_results %>% 
+  ggplot(aes(x = name, y = Intercepts ,fill = name)) +
+  geom_col() +
+  geom_text(aes(label = round(Intercepts, 4), y = Intercepts + 0.05)) +
+  labs(x = "Error Level",
+       y = "Median Intercept",
+       fill = "Erro Level")
+
+grid.arrange(Slopes_plot, Intercepts_plot, nrow = 2)
+```
+
+By the OLS model, we could know when there is a low error in the data. The OLS 
+could produce the slope and intercept close to the true parameters but with the 
+increment of error, the OLS model would be less precise and accurate to predict 
+the relationship between D47 and temperature.
