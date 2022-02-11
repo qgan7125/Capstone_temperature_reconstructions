@@ -1,0 +1,87 @@
+---
+title: "OLS Model"
+author: "Quan Gan"
+date: "2/9/2022"
+output: 
+  html_document:
+    toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+library(tidyverse)
+library(knitr)
+library(dplyr)
+library(ggplot2)
+library(boot)
+```
+
+## load data in
+There are three data sets with low, intermediate, and high errors.
+```{r}
+data_low <- read_csv("../Data/Dataset_S1.csv")
+data_intermediate <- read_csv("../Data/Dataset_S2.csv")
+data_high <- read_csv("../Data/Dataset_S3.csv")
+```
+## The functions for bootstrapping 1000 replicates with OLS models
+```{r}
+# https://www.statmethods.net/advstats/bootstrapping.html
+# Boot library docs
+# calculate the Intercept
+OLS_Intercept <- function(formula, data, indices) {
+  d <- data[indices,]                   # allows boot to select sample
+  fit <- lm(formula, data=d)            # the OLS model
+  return (coef(fit)[1])                 # get intercept
+}
+
+# calculate the slope
+OLS_slope <- function(formula, data, indices) {
+  d <- data[indices,]                   # allows boot to select sample
+  fit <- lm(formula, data=d)            # the OLS model
+  return (coef(fit)[2])                 # get slope
+}
+
+```
+
+## Low error bootstrapping results
+
+### Intercept for low error
+```{r}
+
+# set seed for production
+set.seed(1234)
+
+# bootstrapping with 1000 replications
+results_Intercept <- boot(data=data_low, 
+                statistic=OLS_Intercept,
+                R=1000,
+                formula=D47~Temperature)
+
+plot(results_Intercept)
+
+print(boot.ci(results_Intercept, type="bca"))
+cat("Mean Intercept:", mean(results_Intercept$t))
+
+
+```
+
+### Slope for low error
+```{r}
+# use the same seed to keep same results
+set.seed(1234)
+
+# bootstrapping with 1000 replications
+results_Slope <- boot(data=data_low, 
+                statistic=OLS_slope,
+                R=1000,
+                formula=D47~Temperature)
+
+plot(results_Slope)
+
+print(boot.ci(results_Slope, type="bca"))
+cat("Mean Slope:", mean(results_Slope$t))
+
+
+```
+
