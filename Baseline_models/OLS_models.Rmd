@@ -62,7 +62,7 @@ plot(results_Intercept)
 
 median_Intercept_low <- median(results_Intercept$t)
 print(boot.ci(results_Intercept, type="bca"))
-cat("Mean Intercept:", median_Intercept_low)
+cat("Median Intercept:", median_Intercept_low)
 
 
 ```
@@ -83,8 +83,21 @@ plot(results_Slope)
 median_Slope_low <- median(results_Slope$t)
 
 print(boot.ci(results_Slope, type="bca"))
-cat("Mean Slope:", median_Slope_low)
+cat("Median Slope:", median_Slope_low)
 
+```
+### Comparing result to the true parameters
+Plot confident interval area of the median slope/intercept of bootstrapping results
+And comparing it to the true slope/intercept
+
+I use the true data points to plot.
+```{r}
+data_low %>% 
+  ggplot(aes(x = x_TRUE, y=y_TRUE)) + 
+  geom_ribbon(aes(ymin = 0.0356 * x_TRUE + 0.2833, ymax = 0.0375 * x_TRUE + 0.2611), fill = "orange") +
+  geom_point() +
+  geom_abline(slope = 0.0369, intercept = 0.268, color = 'red') +
+  geom_abline(slope = median_Slope_low, intercept = median_Intercept_low, color = 'yellow')
 ```
 
 ## Intermediate error bootstrapping results
@@ -106,7 +119,7 @@ plot(results_Intercept)
 median_Intercept_Intermediate <- median(results_Intercept$t)
 
 print(boot.ci(results_Intercept, type="bca"))
-cat("Mean Intercept:", median_Intercept_Intermediate)
+cat("Median Intercept:", median_Intercept_Intermediate)
 
 
 ```
@@ -127,9 +140,24 @@ plot(results_Slope)
 median_Slope_Intermediate <- median(results_Slope$t)
 
 print(boot.ci(results_Slope, type="bca"))
-cat("Mean Slope:", median_Slope_Intermediate)
+cat("Median Slope:", median_Slope_Intermediate)
 
 ```
+
+### Comparing result to the true parameters
+Plot confident interval area of the median slope/intercept of bootstrapping results
+And comparing it to the true slope/intercept
+
+I use the true data points to plot.
+```{r}
+data_low %>% 
+  ggplot(aes(x = x_TRUE, y=y_TRUE)) + 
+  geom_ribbon(aes(ymin = 0.0332 * x_TRUE + 0.3131, ymax = 0.0367 * x_TRUE + 0.2709), fill = "orange") +
+  geom_point() +
+  geom_abline(slope = 0.0369, intercept = 0.268, color = 'red') +
+  geom_abline(slope = median_Slope_Intermediate, intercept = median_Intercept_Intermediate, color = 'yellow')
+```
+
 
 ## High error bootstrapping results
 
@@ -149,7 +177,7 @@ plot(results_Intercept)
 
 median_Intercept_high <- median(results_Intercept$t)
 print(boot.ci(results_Intercept, type="bca"))
-cat("Mean Intercept:", median_Intercept_high)
+cat("Median Intercept:", median_Intercept_high)
 
 
 ```
@@ -170,10 +198,23 @@ plot(results_Slope)
 median_Slope_high <- median(results_Slope$t)
 
 print(boot.ci(results_Slope, type="bca"))
-cat("Mean Slope:", median_Slope_high)
+cat("Median Slope:", median_Slope_high)
 
 ```
 
+### Comparing result to the true parameters
+Plot confident interval area of the median slope/intercept of bootstrapping results
+And comparing it to the true slope/intercept
+
+I use the true data points to plot.
+```{r}
+data_low %>% 
+  ggplot(aes(x = x_TRUE, y=y_TRUE)) + 
+  geom_ribbon(aes(ymin = 0.0283 * x_TRUE + 0.3721, ymax = 0.0327 * x_TRUE + 0.3186), fill = "orange") +
+  geom_point() +
+  geom_abline(slope = 0.0369, intercept = 0.268, color = 'red') +
+  geom_abline(slope = median_Slope_high, intercept = median_Intercept_high, color = 'yellow')
+```
 
 ## Median slopes/intercepts VS true parameters
 ```{r}
@@ -201,6 +242,9 @@ Intercepts_plot <- OLS_results %>%
        fill = "Erro Level")
 
 grid.arrange(Slopes_plot, Intercepts_plot, nrow = 2)
+```
+
+
 ```
 
 By the OLS model, we could know when there is a low error in the data. The OLS 
