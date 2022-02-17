@@ -30,17 +30,17 @@ data_high <- read_csv("../Data/Dataset_S3.csv")
 # https://www.statmethods.net/advstats/bootstrapping.html
 # Boot library docs
 # calculate the Intercept
-OLS_Intercept <- function(formula, data, indices) {
+OLS <- function(formula, data, indices) {
   d <- data[indices,]                   # allows boot to select sample
-  fit <- lm(formula, data=d)            # the OLS model
-  return (coef(fit)[1])                 # get intercept
-}
-
-# calculate the slope
-OLS_slope <- function(formula, data, indices) {
-  d <- data[indices,]                   # allows boot to select sample
-  fit <- lm(formula, data=d)            # the OLS model
-  return (coef(fit)[2])                 # get slope
+  mark <- sample(                       # Mark for train-test
+    c(rep(0, 0.7*nrow(d)), 
+    c(rep(1, 0.3*nrow(d)))))      
+  train <- d[mark == 0,]                # train data
+  test <- d[mark == 1,]                 # test data
+  fit <- lm(formula, data=train)        # the OLS model
+  train_MSE <- mean((train$D47 - predict(fit))^2)    # Train set MSE
+  test_MSE <- mean((test$D47 - predict(fit, newdata = test))^2)# Test set MSE
+  return(c(coef(fit), train_MSE, test_MSE))                    # get intercept
 }
 
 ```
@@ -54,43 +54,27 @@ OLS_slope <- function(formula, data, indices) {
 set.seed(1234)
 
 # bootstrapping with 1000 replications
-results_Intercept <- boot(data=data_low, 
-                statistic=OLS_Intercept,
+results_low <- boot(data=data_low, 
+                statistic=OLS,
                 R=1000,
                 formula=D47~Temperature)
 
-plot(results_Intercept)
 
-mean_Intercept_low <- mean(results_Intercept$t)
-median_Intercept_low <- median(results_Intercept$t)
-print(boot.ci(results_Intercept, type="bca"))
-cat("Median Intercept:", median_Intercept_low)
-cat("Mean Intercept:", mean_Intercept_low)
+plot(results_low, index=1)
+plot(results_low, index=2)
 
 
-```
-
-### Slope for low error
-```{r}
-# use the same seed to keep same results
-set.seed(1234)
-
-# bootstrapping with 1000 replications
-results_Slope <- boot(data=data_low, 
-                statistic=OLS_slope,
-                R=1000,
-                formula=D47~Temperature)
-
-plot(results_Slope)
-
-mean_slope_low <- mean(results_Slope$t)
-median_Slope_low <- median(results_Slope$t)
-
-print(boot.ci(results_Slope, type="bca"))
-cat("Median Slope:", median_Slope_low)
-cat("Mean Slope:", mean_slope_low)
+cat("Median Intercept:", median(results_low$t[,1]))
+cat("Intercept Std. Error:", sd(results_low$t[,1]))
+cat("Meidan Slope:", median(results_low$t[,2]))
+cat("Slope Std. Error:", sd(results_low$t[,2]))
+cat("Median Train MSE:", median(results_low$t[,3]))
+cat("Meidan Test MSE:", median(results_low$t[,4]))
+print(boot.ci(results_low, type="bca", index=1))
+print(boot.ci(results_low, type="bca", index=2))
 
 ```
+
 ### Comparing result to the true parameters
 Plot confident interval area of the median slope/intercept of bootstrapping results
 And comparing it to the true slope/intercept
@@ -99,10 +83,10 @@ I use the true data points to plot.
 ```{r}
 data_low %>% 
   ggplot(aes(x = x_TRUE, y=y_TRUE)) + 
-  geom_ribbon(aes(ymin = 0.0356 * x_TRUE + 0.2833, ymax = 0.0375 * x_TRUE + 0.2611), fill = "orange") +
+  geom_ribbon(aes(ymin = 0.0361 * x_TRUE + 0.2766 , ymax = 0.0385 * x_TRUE + 0.2483), fill = "orange") +
   geom_point() +
   geom_abline(slope = 0.0369, intercept = 0.268, color = 'red') +
-  geom_abline(slope = median_Slope_low, intercept = median_Intercept_low, color = 'yellow')
+  geom_abline(slope = median(results_low$t[,2]), intercept = median(results_low$t[,1]), color = 'yellow')
 ```
 Mean slope/intercept VS Median slope/intercept
 ```{r}
@@ -110,8 +94,8 @@ data_low %>%
   ggplot(aes(x = x_TRUE, y=y_TRUE)) +
   geom_point() +
   geom_abline(slope = 0.0369, intercept = 0.268, color = 'red') +
-  geom_abline(slope = median_Slope_low, intercept = median_Intercept_low, color = 'yellow') +
-  geom_abline(slope = mean_slope_low, intercept = mean_Intercept_low, color = 'purple')
+  geom_abline(slope = median(results_low$t[,2]), intercept = median(results_low$t[,1]), color = 'yellow') +
+  geom_abline(slope = mean(results_low$t[,2]), intercept = mean(results_low$t[,1]), color = 'purple')
 ```
 
 
@@ -124,41 +108,24 @@ data_low %>%
 set.seed(1234)
 
 # bootstrapping with 1000 replications
-results_Intercept <- boot(data=data_intermediate, 
-                statistic=OLS_Intercept,
+results_intermediate <- boot(data=data_intermediate, 
+                statistic=OLS,
                 R=1000,
                 formula=D47~Temperature)
 
-plot(results_Intercept)
 
-mean_Intercept_Intermediate <- mean(results_Intercept$t)
-median_Intercept_Intermediate <- median(results_Intercept$t)
+plot(results_intermediate, index=1)
+plot(results_intermediate, index=2)
 
-print(boot.ci(results_Intercept, type="bca"))
-cat("Median Intercept:", median_Intercept_Intermediate)
-cat("Mean Intercept:", mean_Intercept_Intermediate)
 
-```
-
-### Slope for Intermediate error
-```{r}
-# use the same seed to keep same results
-set.seed(1234)
-
-# bootstrapping with 1000 replications
-results_Slope <- boot(data=data_intermediate, 
-                statistic=OLS_slope,
-                R=1000,
-                formula=D47~Temperature)
-
-plot(results_Slope)
-
-mean_Slope_Intermediate <- mean(results_Slope$t)
-median_Slope_Intermediate <- median(results_Slope$t)
-
-print(boot.ci(results_Slope, type="bca"))
-cat("Median Slope:", median_Slope_Intermediate)
-cat("Mean Slope:", mean_Slope_Intermediate)
+cat("Median Intercept:", median(results_intermediate$t[,1]))
+cat("Intercept Std. Error:", sd(results_intermediate$t[,1]))
+cat("Meidan Slope:", median(results_intermediate$t[,2]))
+cat("Slope Std. Error:", sd(results_intermediate$t[,2]))
+cat("Median Train MSE:", median(results_intermediate$t[,3]))
+cat("Meidan Test MSE:", median(results_intermediate$t[,4]))
+print(boot.ci(results_intermediate, type="bca", index=1))
+print(boot.ci(results_intermediate, type="bca", index=2))
 
 ```
 
@@ -170,10 +137,10 @@ I use the true data points to plot.
 ```{r}
 data_intermediate %>% 
   ggplot(aes(x = x_TRUE, y=y_TRUE)) + 
-  geom_ribbon(aes(ymin = 0.0332 * x_TRUE + 0.3131, ymax = 0.0367 * x_TRUE + 0.2709), fill = "orange") +
+  geom_ribbon(aes(ymin = 0.0325 * x_TRUE + 0.3215 , ymax = 0.0364  * x_TRUE + 0.2759), fill = "orange") +
   geom_point() +
   geom_abline(slope = 0.0369, intercept = 0.268, color = 'red') +
-  geom_abline(slope = median_Slope_Intermediate, intercept = median_Intercept_Intermediate, color = 'yellow')
+  geom_abline(slope = median(results_intermediate$t[,2]), intercept = median(results_intermediate$t[,1]), color = 'yellow')
 ```
 Mean slope/intercept VS Median slope/intercept
 ```{r}
@@ -181,8 +148,8 @@ data_intermediate %>%
   ggplot(aes(x = x_TRUE, y=y_TRUE)) +
   geom_point() +
   geom_abline(slope = 0.0369, intercept = 0.268, color = 'red') +
-  geom_abline(slope = median_Slope_Intermediate, intercept = median_Intercept_Intermediate, color = 'yellow') +
-  geom_abline(slope = mean_Slope_Intermediate, intercept = mean_Intercept_Intermediate, color = 'purple')
+  geom_abline(slope = median(results_intermediate$t[,2]), intercept = median(results_intermediate$t[,1]), color = 'yellow') +
+  geom_abline(slope = mean(results_intermediate$t[,2]), intercept = mean(results_intermediate$t[,1]), color = 'purple')
 ```
 
 
@@ -191,44 +158,30 @@ data_intermediate %>%
 ### Intercept for high error
 ```{r}
 
+
 # set seed for production
 set.seed(1234)
 
 # bootstrapping with 1000 replications
-results_Intercept <- boot(data=data_high, 
-                statistic=OLS_Intercept,
+results_high <- boot(data=data_high, 
+                statistic=OLS,
                 R=1000,
                 formula=D47~Temperature)
 
-plot(results_Intercept)
 
-mean_Intercept_high <- mean(results_Intercept$t)
-median_Intercept_high <- median(results_Intercept$t)
-print(boot.ci(results_Intercept, type="bca"))
-cat("Median Intercept:", median_Intercept_high)
-cat("Mean Intercept:", mean_Intercept_high)
+plot(results_high, index=1)
+plot(results_high, index=2)
 
-```
+cat("Median Intercept:", median(results_high$t[,1]))
+cat("Intercept Std. Error:", sd(results_high$t[,1]))
+cat("Meidan Slope:", median(results_high$t[,2]))
+cat("Slope Std. Error:", sd(results_high$t[,2]))
+cat("Median Train MSE:", median(results_high$t[,3]))
+cat("Meidan Test MSE:", median(results_high$t[,4]))
+print(boot.ci(results_high, type="bca", index=1))
+print(boot.ci(results_high, type="bca", index=2))
 
-### Slope for high error
-```{r}
-# use the same seed to keep same results
-set.seed(1234)
 
-# bootstrapping with 1000 replications
-results_Slope <- boot(data=data_high, 
-                statistic=OLS_slope,
-                R=1000,
-                formula=D47~Temperature)
-
-plot(results_Slope)
-
-mean_Slope_high <- mean(results_Slope$t)
-median_Slope_high <- median(results_Slope$t)
-
-print(boot.ci(results_Slope, type="bca"))
-cat("Median Slope:", median_Slope_high)
-cat("Mean Slope:", mean_Slope_high)
 ```
 
 
@@ -240,10 +193,10 @@ I use the true data points to plot.
 ```{r}
 data_high %>% 
   ggplot(aes(x = x_TRUE, y=y_TRUE)) + 
-  geom_ribbon(aes(ymin = 0.0283 * x_TRUE + 0.3721, ymax = 0.0327 * x_TRUE + 0.3186), fill = "orange") +
+  geom_ribbon(aes(ymin = 0.0289 * x_TRUE + 0.3644  , ymax = 0.0347   * x_TRUE + 0.2929), fill = "orange") +
   geom_point() +
   geom_abline(slope = 0.0369, intercept = 0.268, color = 'red') +
-  geom_abline(slope = median_Slope_high, intercept = median_Intercept_high, color = 'yellow')
+  geom_abline(slope = median(results_high$t[,2]), intercept = median(results_high$t[,1]), color = 'yellow')
 ```
 
 Mean slope/intercept VS Median slope/intercept
@@ -252,46 +205,24 @@ data_high %>%
   ggplot(aes(x = x_TRUE, y=y_TRUE)) +
   geom_point() +
   geom_abline(slope = 0.0369, intercept = 0.268, color = 'red') +
-  geom_abline(slope = median_Slope_high, intercept = median_Intercept_high, color = 'yellow') +
-  geom_abline(slope = mean_Slope_high, intercept = mean_Intercept_high, color = 'purple')
+  geom_abline(slope = median(results_high$t[,2]), intercept = median(results_high$t[,1]), color = 'yellow') +
+  geom_abline(slope = mean(results_high$t[,2]), intercept = mean(results_high$t[,1]), color = 'purple')
 ```
 
 ## Median slopes/intercepts VS true parameters
-```{r}
-# integrate variables into the lists
-DataNames <- c('Low', 'Intermediate', 'High', 'True')
-Slopes <- c(median_Slope_low, median_Slope_Intermediate, median_Slope_high, 0.0369)
-Intercepts <- c(median_Intercept_low, median_Intercept_Intermediate, median_Intercept_high, 0.268)
 
-OLS_results <- do.call(rbind, Map(data.frame, name=DataNames, Slopes=Slopes, Intercepts=Intercepts))
-
-Slopes_plot <- OLS_results %>% 
-  ggplot(aes(x = name, y = Slopes,fill = name)) +
-  geom_col() +
-  geom_text(aes(label = round(Slopes, 4), y = Slopes + 0.005)) +
-  labs(x = "Error Level",
-       y = "Median Slope",
-       fill = "Error Level")
-
-Intercepts_plot <- OLS_results %>% 
-  ggplot(aes(x = name, y = Intercepts ,fill = name)) +
-  geom_col() +
-  geom_text(aes(label = round(Intercepts, 4), y = Intercepts + 0.05)) +
-  labs(x = "Error Level",
-       y = "Median Intercept",
-       fill = "Erro Level")
-
-grid.arrange(Slopes_plot, Intercepts_plot, nrow = 2)
-```
 Mean slope/Intercept VS Median slope/Intercept
 ```{r}
-meanIntercept <- c(mean_Intercept_low, mean_Intercept_Intermediate, mean_Intercept_high)
-meanSlope <- c(mean_slope_low, mean_Slope_Intermediate, mean_Slope_high)
-medianIntercept <- c(median_Intercept_low, median_Intercept_Intermediate, median_Intercept_high)
-medianSlope <- c(median_Slope_low, median_Slope_Intermediate, median_Slope_high)
+medianIntercept <- c(median(results_low$t[,1]), median(results_intermediate$t[,1]), median(results_high$t[,1]))
+sdIntercept <- c(sd(results_low$t[,1]), sd(results_intermediate$t[,1]), sd(results_high$t[,1]))
+medianSlope <- c(median(results_low$t[,2]), median(results_intermediate$t[,2]), median(results_high$t[,2]))
+sdSlope <- c(sd(results_low$t[,2]), sd(results_intermediate$t[,2]), sd(results_high$t[,2]))
+medianTrainMSE <- c(median(results_low$t[,3]), median(results_intermediate$t[,3]), median(results_high$t[,3]))
+medianTestMSE<- c(median(results_low$t[,4]), median(results_intermediate$t[,4]), median(results_high$t[,4]))
 
-mat <- array(c(meanIntercept, medianIntercept, meanSlope, medianSlope), dim = c(3, 4))
-colnames(mat) <- c("mean_Intercept", "median_Intercept", "mean_Slope", "median_Slope")
+mat <- array(c(medianIntercept, sdIntercept, medianSlope, sdSlope, medianTrainMSE, medianTestMSE), dim = c(3, 6))
+colnames(mat) <- c("median_Intercept", "sd_Intercept", "median_Slope", "sd_slope", "median_train_MSE", "median_test_MSE")
+rownames(mat) <- c("Low Error", "Intermediate Error", "High Error")
 mat %>% 
   kable()
 ```
