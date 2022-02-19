@@ -1,0 +1,115 @@
+---
+title: "Bayesian linear regression"
+author: "Quan Gan"
+date: "2/19/2022"
+output: 
+  html_document:
+    toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+library(rstan)
+library(tidyverse)
+options(mc.cores = parallel::detectCores())
+
+```
+
+## Load data in
+There are three data sets with low, intermediate, and high errors.
+```{r}
+data_low <- read_csv("../Data/Dataset_S1.csv")
+data_intermediate <- read_csv("../Data/Dataset_S2.csv")
+data_high <- read_csv("../Data/Dataset_S3.csv")
+```
+
+## Bayesian linear regression
+
+Using the Bayesian linear regression without error
+The model setup is is stan/Bayesian_linear_model.stan
+
+### Data with low error
+```{r}
+stan_data_low <- list(N = nrow(data_low), Temperature = data_low$Temperature, D47 = data_low$D47)
+
+rstan_options(auto_write = TRUE)
+model_low <- stan(file = "stan/Bayesian_linear_model.stan", data = stan_data_low, iter = 1000, chains = 4, seed = 1234)
+
+results_low <- rstan::extract(model_low)
+cat("Median Intercept", median(results_low$alpha))
+cat("Median Slope", median(results_low$beta))
+summary(model_low)$summary
+```
+```{r}
+
+summary(model_low)$summary[2,4]
+summary(model_low)$summary[1,8]
+```
+
+#### Comparing result to the true parameters
+Plot confident interval area of the median slope/intercept of bootstrapping results
+And comparing it to the true slope/intercept
+
+I use the true data points to plot.
+```{r}
+data_low %>% 
+  ggplot(aes(x = x_TRUE, y=y_TRUE)) + 
+  geom_ribbon(aes(ymin = summary(model_low)$summary[2,4] * x_TRUE + summary(model_low)$summary[1,8] , ymax = summary(model_low)$summary[2,8] * x_TRUE + summary(model_low)$summary[1,4]), fill = "orange") +
+  geom_point() +
+  geom_abline(slope = 0.0369, intercept = 0.268, color = 'red') +
+  geom_abline(slope = median(results_low$beta), intercept = median(results_low$alpha), color = 'yellow')
+```
+
+### Data with intermediate error
+```{r}
+stan_data_intermediate <- list(N = nrow(data_intermediate), Temperature = data_intermediate$Temperature, D47 = data_intermediate$D47)
+
+rstan_options(auto_write = TRUE)
+model_intermediate <- stan(file = "stan/Bayesian_linear_model.stan", data = stan_data_intermediate, iter = 1000, chains = 4, seed = 1234)
+
+results_intermediate <- rstan::extract(model_intermediate)
+cat("Median Intercept", median(results_intermediate$alpha))
+cat("Median Slope", median(results_intermediate$beta))
+summary(model_intermediate)$summary
+```
+
+#### Comparing result to the true parameters
+Plot confident interval area of the median slope/intercept of bootstrapping results
+And comparing it to the true slope/intercept
+
+I use the true data points to plot.
+```{r}
+data_intermediate %>% 
+  ggplot(aes(x = x_TRUE, y=y_TRUE)) + 
+  geom_ribbon(aes(ymin = summary(model_intermediate)$summary[2,4] * x_TRUE + summary(model_intermediate)$summary[1,8] , ymax = summary(model_intermediate)$summary[2,8] * x_TRUE + summary(model_intermediate)$summary[1,4]), fill = "orange") +
+  geom_point() +
+  geom_abline(slope = 0.0369, intercept = 0.268, color = 'red') +
+  geom_abline(slope = median(results_intermediate$beta), intercept = median(results_intermediate$alpha), color = 'yellow')
+```
+
+### Data with high error
+```{r}
+stan_data_high <- list(N = nrow(data_high), Temperature = data_high$Temperature, D47 = data_high$D47)
+
+rstan_options(auto_write = TRUE)
+model_high <- stan(file = "stan/Bayesian_linear_model.stan", data = stan_data_high, iter = 1000, chains = 4, seed = 1234)
+
+results_high <- rstan::extract(model_high)
+cat("Median Intercept", median(results_high$alpha))
+cat("Median Slope", median(results_high$beta))
+summary(model_high)$summary
+```
+
+#### Comparing result to the true parameters
+Plot confident interval area of the median slope/intercept of bootstrapping results
+And comparing it to the true slope/intercept
+
+I use the true data points to plot.
+```{r}
+data_high %>% 
+  ggplot(aes(x = x_TRUE, y=y_TRUE)) + 
+  geom_ribbon(aes(ymin = summary(model_high)$summary[2,4] * x_TRUE + summary(model_high)$summary[1,8] , ymax = summary(model_high)$summary[2,8] * x_TRUE + summary(model_high)$summary[1,4]), fill = "orange") +
+  geom_point() +
+  geom_abline(slope = 0.0369, intercept = 0.268, color = 'red') +
+  geom_abline(slope = median(results_high$beta), intercept = median(results_high$alpha), color = 'yellow')
+```
