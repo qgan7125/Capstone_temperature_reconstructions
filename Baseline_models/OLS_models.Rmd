@@ -14,7 +14,6 @@ library(tidyverse)
 library(dplyr)
 library(ggplot2)
 library(boot)
-library(gridExtra)
 library(knitr)
 ```
 
@@ -86,7 +85,10 @@ data_low %>%
   geom_ribbon(aes(ymin = 0.0361 * x_TRUE + 0.2766 , ymax = 0.0385 * x_TRUE + 0.2483), fill = "orange") +
   geom_point() +
   geom_abline(slope = 0.0369, intercept = 0.268, color = 'red') +
-  geom_abline(slope = median(results_low$t[,2]), intercept = median(results_low$t[,1]), color = 'yellow')
+  geom_abline(slope = median(results_low$t[,2]), intercept = median(results_low$t[,1]), color = 'yellow') + 
+  labs(title = "OLS model with the low error data") + 
+  xlab("True Temperature") + 
+  ylab("True D47")
 ```
 Mean slope/intercept VS Median slope/intercept
 ```{r}
@@ -95,7 +97,7 @@ data_low %>%
   geom_point() +
   geom_abline(slope = 0.0369, intercept = 0.268, color = 'red') +
   geom_abline(slope = median(results_low$t[,2]), intercept = median(results_low$t[,1]), color = 'yellow') +
-  geom_abline(slope = mean(results_low$t[,2]), intercept = mean(results_low$t[,1]), color = 'purple')
+  geom_abline(slope = mean(results_low$t[,2]), intercept = mean(results_low$t[,1]), color = 'purple') 
 ```
 
 
@@ -140,7 +142,10 @@ data_intermediate %>%
   geom_ribbon(aes(ymin = 0.0325 * x_TRUE + 0.3215 , ymax = 0.0364  * x_TRUE + 0.2759), fill = "orange") +
   geom_point() +
   geom_abline(slope = 0.0369, intercept = 0.268, color = 'red') +
-  geom_abline(slope = median(results_intermediate$t[,2]), intercept = median(results_intermediate$t[,1]), color = 'yellow')
+  geom_abline(slope = median(results_intermediate$t[,2]), intercept = median(results_intermediate$t[,1]), color = 'yellow') +
+  labs(title = "OLS model with the intermediate error data") + 
+  xlab("True Temperature") + 
+  ylab("True D47")
 ```
 Mean slope/intercept VS Median slope/intercept
 ```{r}
@@ -196,7 +201,10 @@ data_high %>%
   geom_ribbon(aes(ymin = 0.0289 * x_TRUE + 0.3644  , ymax = 0.0347   * x_TRUE + 0.2929), fill = "orange") +
   geom_point() +
   geom_abline(slope = 0.0369, intercept = 0.268, color = 'red') +
-  geom_abline(slope = median(results_high$t[,2]), intercept = median(results_high$t[,1]), color = 'yellow')
+  geom_abline(slope = median(results_high$t[,2]), intercept = median(results_high$t[,1]), color = 'yellow') + 
+  labs(title = "OLS model with the high error data") + 
+  xlab("True Temperature") + 
+  ylab("True D47")
 ```
 
 Mean slope/intercept VS Median slope/intercept

@@ -11,6 +11,8 @@ output:
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 library(rstan)
 library(tidyverse)
+library(knitr)
+library(ggplot2)
 options(mc.cores = parallel::detectCores())
 
 ```
@@ -40,11 +42,6 @@ cat("Median Intercept", median(results_low$alpha))
 cat("Median Slope", median(results_low$beta))
 summary(model_low)$summary
 ```
-```{r}
-
-summary(model_low)$summary[2,4]
-summary(model_low)$summary[1,8]
-```
 
 #### Comparing result to the true parameters
 Plot confident interval area of the median slope/intercept of bootstrapping results
@@ -57,7 +54,10 @@ data_low %>%
   geom_ribbon(aes(ymin = summary(model_low)$summary[2,4] * x_TRUE + summary(model_low)$summary[1,8] , ymax = summary(model_low)$summary[2,8] * x_TRUE + summary(model_low)$summary[1,4]), fill = "orange") +
   geom_point() +
   geom_abline(slope = 0.0369, intercept = 0.268, color = 'red') +
-  geom_abline(slope = median(results_low$beta), intercept = median(results_low$alpha), color = 'yellow')
+  geom_abline(slope = median(results_low$beta), intercept = median(results_low$alpha), color = 'yellow') + 
+  labs(title = "Bayesian model with low error data") + 
+  xlab("True Temperature") + 
+  ylab("True D47")
 ```
 
 ### Data with intermediate error
@@ -84,7 +84,10 @@ data_intermediate %>%
   geom_ribbon(aes(ymin = summary(model_intermediate)$summary[2,4] * x_TRUE + summary(model_intermediate)$summary[1,8] , ymax = summary(model_intermediate)$summary[2,8] * x_TRUE + summary(model_intermediate)$summary[1,4]), fill = "orange") +
   geom_point() +
   geom_abline(slope = 0.0369, intercept = 0.268, color = 'red') +
-  geom_abline(slope = median(results_intermediate$beta), intercept = median(results_intermediate$alpha), color = 'yellow')
+  geom_abline(slope = median(results_intermediate$beta), intercept = median(results_intermediate$alpha), color = 'yellow') +
+  labs(title = "Bayesian model with the intermediate error data") + 
+  xlab("True Temperature") + 
+  ylab("True D47")
 ```
 
 ### Data with high error
@@ -111,5 +114,24 @@ data_high %>%
   geom_ribbon(aes(ymin = summary(model_high)$summary[2,4] * x_TRUE + summary(model_high)$summary[1,8] , ymax = summary(model_high)$summary[2,8] * x_TRUE + summary(model_high)$summary[1,4]), fill = "orange") +
   geom_point() +
   geom_abline(slope = 0.0369, intercept = 0.268, color = 'red') +
-  geom_abline(slope = median(results_high$beta), intercept = median(results_high$alpha), color = 'yellow')
+  geom_abline(slope = median(results_high$beta), intercept = median(results_high$alpha), color = 'yellow') +
+  labs(title = "Bayesian model with the high error data") + 
+  xlab("True Temperature") + 
+  ylab("True D47")
+```
+
+## Results summary
+```{r}
+medianIntercept <- c(median(results_low$alpha), median(results_intermediate$alpha), median(results_high$alpha))
+se_mean_Intercept <- c(summary(model_low)$summary[1,2], summary(model_intermediate)$summary[1,2], summary(model_high)$summary[1,2])
+medianSlope <- c(median(results_low$beta), median(results_intermediate$beta), median(results_high$beta))
+se_mean_Slope <- c(summary(model_low)$summary[2,2], summary(model_intermediate)$summary[2,2], summary(model_high)$summary[2,2])
+
+mat <- array(c(medianIntercept, se_mean_Intercept, medianSlope, se_mean_Slope), dim = c(3, 4))
+colnames(mat) <- c("median_Intercept", "se_mean_Intercept", "median_Slope", "se_mean_slope")
+rownames(mat) <- c("Low Error", "Intermediate Error", "High Error")
+
+mat %>% 
+  kable()
+```
 ```
