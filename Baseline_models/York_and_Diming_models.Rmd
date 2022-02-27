@@ -15,6 +15,7 @@ library(knitr)
 library(ggplot2)
 library(IsoplotR)
 library(boot)
+library(deming)
 ```
 
 ## Load data in
@@ -24,12 +25,6 @@ data_low <- read_csv("../Data/Dataset_S1.csv")
 data_intermediate <- read_csv("../Data/Dataset_S2.csv")
 data_high <- read_csv("../Data/Dataset_S3.csv")
 ```
-
-## York Regresion
-
-Unified regression algorithm. Given n pairs of measurements of x and y with their 
-uncertainties x_error, y_error. The york function finds the best straight line 
-using the least-squares algorithm of York.
 
 ## The functions for bootstrapping 1000 replicates with York models
 ```{r}
@@ -47,14 +42,37 @@ York_model <- function(data, indices) {
   fit <- york(york_data)                # the York model
   Intercept <- fit$a['a']
   Slope <- fit$b['b']
-  train_MSE <- mean((train$D47 - (train$Temperature * Slope + Intercept))^2)    # Train set MSE
-  test_MSE <- mean((test$D47 - (test$Temperature * Slope + Intercept))^2)# Test set MSE
+  train_MSE <- mean((train$D47 - (train$Temperature * Slope + Intercept))^2)  # Train set MSE
+  test_MSE <- mean((test$D47 - (test$Temperature * Slope + Intercept))^2) # Test set MSE
+  return(c(Intercept, Slope, train_MSE, test_MSE))                    # get intercept
+}
+
+Deming_model <- function(formula, data, indices) {
+  d <- data[indices,]                   # allows boot to select sample
+  mark <- sample(                       # Mark for train-test
+    c(rep(0, 0.7*nrow(d)), 
+    c(rep(1, 0.3*nrow(d)))))      
+  train <- d[mark == 0,]                # train data
+  test <- d[mark == 1,]                 # test data
+  fit <- deming(formula, data=train, xstd=abs(TempError), ystd=abs(D47error))    # the Deming model
+  Intercept <- fit$coefficients[1]
+  Slope <- fit$coefficients[2]
+  train_MSE <- mean((train$D47 - (train$Temperature * Slope + Intercept))^2)  # Train set MSE
+  test_MSE <- mean((test$D47 - (test$Temperature * Slope + Intercept))^2) # Test set MSE
   return(c(Intercept, Slope, train_MSE, test_MSE))                    # get intercept
 }
 
 ```
 
-## Low error data
+
+
+## York Regresion
+
+Unified regression algorithm. Given n pairs of measurements of x and y with their 
+uncertainties x_error, y_error. The york function finds the best straight line 
+using the least-squares algorithm of York.
+
+### Low error data
 ```{r}
 # set seed for production
 set.seed(1234)
@@ -74,7 +92,7 @@ cat("Meidan Test MSE:", median(york_results_low$t[,4]))
 print(boot.ci(york_results_low, type="bca", index=1))
 print(boot.ci(york_results_low, type="bca", index=2))
 ```
-### Comparing result to the true parameters
+#### Comparing result to the true parameters
 Plot confident interval area of the median slope/intercept of bootstrapping results
 And comparing it to the true slope/intercept
 
@@ -91,7 +109,7 @@ data_low %>%
   ylab("True D47")
 ```
 
-## Intermediate error data
+### Intermediate error data
 ```{r}
 # set seed for production
 set.seed(1234)
@@ -112,7 +130,7 @@ print(boot.ci(york_results_intermediate, type="bca", index=1))
 print(boot.ci(york_results_intermediate, type="bca", index=2))
 ```
 
-### Comparing result to the true parameters
+#### Comparing result to the true parameters
 Plot confident interval area of the median slope/intercept of bootstrapping results
 And comparing it to the true slope/intercept
 
@@ -129,7 +147,7 @@ data_intermediate %>%
   ylab("True D47")
 ```
 
-## High error data
+### High error data
 ```{r}
 # set seed for production
 set.seed(1234)
@@ -150,7 +168,7 @@ print(boot.ci(york_results_high, type="bca", index=1))
 print(boot.ci(york_results_high, type="bca", index=2))
 ```
 
-### Comparing result to the true parameters
+#### Comparing result to the true parameters
 Plot confident interval area of the median slope/intercept of bootstrapping results
 And comparing it to the true slope/intercept
 
@@ -183,4 +201,125 @@ colnames(mat) <- c("median_Intercept", "sd_Intercept", "median_Slope", "sd_slope
 rownames(mat) <- c("Low Error", "Intermediate Error", "High Error")
 mat %>% 
   kable()
+```
+
+## Deming Regression
+
+Find the MLE line relating x and y when both are measured with error. When the variances of x and y are constant and equal, this is the special case of Deming regression.
+
+### Low error data
+```{r}
+# set seed for production
+set.seed(1234)
+
+# bootstrapping with 1000 replications
+deming_results_low <- boot(data=data_low, 
+                statistic=Deming_model,
+                R=1000,
+                formula=D47~Temperature)
+
+
+cat("Median Intercept:", median(deming_results_low$t[,1]))
+cat("Intercept Std. Error:", sd(deming_results_low$t[,1]))
+cat("Meidan Slope:", median(deming_results_low$t[,2]))
+cat("Slope Std. Error:", sd(deming_results_low$t[,2]))
+cat("Median Train MSE:", median(deming_results_low$t[,3]))
+cat("Meidan Test MSE:", median(deming_results_low$t[,4]))
+print(boot.ci(deming_results_low, type="bca", index=1))
+print(boot.ci(deming_results_low, type="bca", index=2))
+```
+
+#### Comparing result to the true parameters
+Plot confident interval area of the median slope/intercept of bootstrapping results
+And comparing it to the true slope/intercept
+
+I use the true data points to plot.
+```{r}
+data_low %>% 
+  ggplot(aes(x = x_TRUE, y=y_TRUE)) + 
+  geom_ribbon(aes(ymin = 0.0340 * x_TRUE + 0.3005  , ymax = 0.0435  * x_TRUE + 0.1897), fill = "orange") +
+  geom_point() +
+  geom_abline(slope = 0.0369, intercept = 0.268, color = 'red') +
+  geom_abline(slope = median(deming_results_low$t[,2]), intercept = median(deming_results_low$t[,1]), color = 'yellow') + 
+  labs(title = "York model with the low error data") + 
+  xlab("True Temperature") + 
+  ylab("True D47")
+```
+
+### Intermediate error data
+```{r}
+# set seed for production
+set.seed(1234)
+
+# bootstrapping with 1000 replications
+deming_results_intermediate <- boot(data=data_intermediate, 
+                statistic=Deming_model,
+                R=1000,
+                formula=D47~Temperature)
+
+
+cat("Median Intercept:", median(deming_results_intermediate$t[,1]))
+cat("Intercept Std. Error:", sd(deming_results_intermediate$t[,1]))
+cat("Meidan Slope:", median(deming_results_intermediate$t[,2]))
+cat("Slope Std. Error:", sd(deming_results_intermediate$t[,2]))
+cat("Median Train MSE:", median(deming_results_intermediate$t[,3]))
+cat("Meidan Test MSE:", median(deming_results_intermediate$t[,4]))
+print(boot.ci(deming_results_intermediate, type="bca", index=1))
+print(boot.ci(deming_results_intermediate, type="bca", index=2))
+```
+
+#### Comparing result to the true parameters
+Plot confident interval area of the median slope/intercept of bootstrapping results
+And comparing it to the true slope/intercept
+
+I use the true data points to plot.
+```{r}
+data_intermediate %>% 
+  ggplot(aes(x = x_TRUE, y=y_TRUE)) + 
+  geom_ribbon(aes(ymin = 0.0314 * x_TRUE + 0.3397   , ymax = 0.0455  * x_TRUE + 0.1684), fill = "orange") +
+  geom_point() +
+  geom_abline(slope = 0.0369, intercept = 0.268, color = 'red') +
+  geom_abline(slope = median(deming_results_intermediate$t[,2]), intercept = median(deming_results_intermediate$t[,1]), color = 'yellow') + 
+  labs(title = "York model with the intermediate error data") + 
+  xlab("True Temperature") + 
+  ylab("True D47")
+```
+
+### High error data
+```{r}
+# set seed for production
+set.seed(1234)
+
+# bootstrapping with 1000 replications
+deming_results_high <- boot(data=data_high, 
+                statistic=Deming_model,
+                R=1000,
+                formula=D47~Temperature)
+
+
+cat("Median Intercept:", median(deming_results_high$t[,1]))
+cat("Intercept Std. Error:", sd(deming_results_high$t[,1]))
+cat("Meidan Slope:", median(deming_results_high$t[,2]))
+cat("Slope Std. Error:", sd(deming_results_high$t[,2]))
+cat("Median Train MSE:", median(deming_results_high$t[,3]))
+cat("Meidan Test MSE:", median(deming_results_high$t[,4]))
+print(boot.ci(deming_results_high, type="bca", index=1))
+print(boot.ci(deming_results_high, type="bca", index=2))
+```
+
+#### Comparing result to the true parameters
+Plot confident interval area of the median slope/intercept of bootstrapping results
+And comparing it to the true slope/intercept
+
+I use the true data points to plot.
+```{r}
+data_high %>% 
+  ggplot(aes(x = x_TRUE, y=y_TRUE)) + 
+  geom_ribbon(aes(ymin = 0.0435 * x_TRUE + 0.1889    , ymax = 0.0644   * x_TRUE - 0.0609), fill = "orange") +
+  geom_point() +
+  geom_abline(slope = 0.0369, intercept = 0.268, color = 'red') +
+  geom_abline(slope = median(deming_results_high$t[,2]), intercept = median(deming_results_high$t[,1]), color = 'yellow') + 
+  labs(title = "York model with the high error data") + 
+  xlab("True Temperature") + 
+  ylab("True D47")
 ```
