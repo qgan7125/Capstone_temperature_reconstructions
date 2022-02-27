@@ -120,7 +120,7 @@ data_high %>%
   ylab("True D47")
 ```
 
-## Results summary
+## Bayesian linear regression Results summary
 ```{r}
 medianIntercept <- c(median(results_low$alpha), median(results_intermediate$alpha), median(results_high$alpha))
 se_mean_Intercept <- c(summary(model_low)$summary[1,2], summary(model_intermediate)$summary[1,2], summary(model_high)$summary[1,2])
@@ -134,4 +134,120 @@ rownames(mat) <- c("Low Error", "Intermediate Error", "High Error")
 mat %>% 
   kable()
 ```
+
+## Bayesian Linear Regression with Errors
+
+Using the Bayesian linear regression with error
+The model setup is is stan/Bayesian_linear_model_with_error.stan
+
+### Data with low error
+```{r}
+stan_data_low <- list(N = nrow(data_low), 
+                      Temperature = data_low$Temperature, 
+                      Temperature_true = data_low$x_TRUE,
+                      Temperature_error = abs(data_low$TempError),
+                      D47 = data_low$D47,
+                      D47_true = data_low$y_TRUE,
+                      D47_error = abs(data_low$D47error))
+
+
+rstan_options(auto_write = TRUE)
+model_low <- stan(file = "stan/Bayesian_linear_model_with_error.stan", data = stan_data_low, iter = 1000, chains = 4, seed = 1234)
+
+cat("Median Intercept", summary(model_low)$summary[1,6])
+cat("Median Slope", summary(model_low)$summary[2,6])
+summary(model_low)$summary
+
 ```
+
+#### Comparing result to the true parameters
+Plot confident interval area of the median slope/intercept of bootstrapping results
+And comparing it to the true slope/intercept
+
+I use the true data points to plot.
+```{r}
+data_low %>% 
+  ggplot(aes(x = x_TRUE, y=y_TRUE)) + 
+  geom_ribbon(aes(ymin = summary(model_low)$summary[2,4] * x_TRUE + summary(model_low)$summary[1,8] , ymax = summary(model_low)$summary[2,8] * x_TRUE + summary(model_low)$summary[1,4]), fill = "orange") +
+  geom_point() +
+  geom_abline(slope = 0.0369, intercept = 0.268, color = 'red') +
+  geom_abline(slope = summary(model_low)$summary[2,6], intercept = summary(model_low)$summary[1,6], color = 'yellow') + 
+  labs(title = "Bayesian model with parameters' errors and low error data") + 
+  xlab("True Temperature") + 
+  ylab("True D47")
+```
+
+
+### Data with Intermediate error
+```{r}
+stan_data_intermediate <- list(N = nrow(data_intermediate), 
+                      Temperature = data_intermediate$Temperature, 
+                      Temperature_true = data_intermediate$x_TRUE,
+                      Temperature_error = abs(data_intermediate$TempError),
+                      D47 = data_intermediate$D47,
+                      D47_true = data_intermediate$y_TRUE,
+                      D47_error = abs(data_intermediate$D47error))
+
+
+rstan_options(auto_write = TRUE)
+model_intermediate <- stan(file = "stan/Bayesian_linear_model_with_error.stan", data = stan_data_intermediate, iter = 1000, chains = 4, seed = 1234)
+
+cat("Median Intercept", summary(model_intermediate)$summary[1,6])
+cat("Median Slope", summary(model_intermediate)$summary[2,6])
+summary(model_intermediate)$summary
+
+```
+
+#### Comparing result to the true parameters
+Plot confident interval area of the median slope/intercept of bootstrapping results
+And comparing it to the true slope/intercept
+
+I use the true data points to plot.
+```{r}
+data_intermediate %>% 
+  ggplot(aes(x = x_TRUE, y=y_TRUE)) + 
+  geom_ribbon(aes(ymin = summary(model_intermediate)$summary[2,4] * x_TRUE + summary(model_intermediate)$summary[1,8] , ymax = summary(model_intermediate)$summary[2,8] * x_TRUE + summary(model_intermediate)$summary[1,4]), fill = "orange") +
+  geom_point() +
+  geom_abline(slope = 0.0369, intercept = 0.268, color = 'red') +
+  geom_abline(slope = summary(model_intermediate)$summary[2,6], intercept = summary(model_intermediate)$summary[1,6], color = 'yellow') + 
+  labs(title = "Bayesian model with parameters' errors and intermediate error data") + 
+  xlab("True Temperature") + 
+  ylab("True D47")
+```
+### Data with High error
+```{r}
+stan_data_high <- list(N = nrow(data_high), 
+                      Temperature = data_high$Temperature, 
+                      Temperature_true = data_high$x_TRUE,
+                      Temperature_error = abs(data_high$TempError),
+                      D47 = data_high$D47,
+                      D47_true = data_high$y_TRUE,
+                      D47_error = abs(data_high$D47error))
+
+
+rstan_options(auto_write = TRUE)
+model_high <- stan(file = "stan/Bayesian_linear_model_with_error.stan", data = stan_data_high, iter = 1000, chains = 4, seed = 1234)
+
+cat("Median Intercept", summary(model_high)$summary[1,6])
+cat("Median Slope", summary(model_high)$summary[2,6])
+summary(model_high)$summary
+
+```
+
+#### Comparing result to the true parameters
+Plot confident interval area of the median slope/intercept of bootstrapping results
+And comparing it to the true slope/intercept
+
+I use the true data points to plot.
+```{r}
+data_high %>% 
+  ggplot(aes(x = x_TRUE, y=y_TRUE)) + 
+  geom_ribbon(aes(ymin = summary(model_high)$summary[2,4] * x_TRUE + summary(model_high)$summary[1,8] , ymax = summary(model_high)$summary[2,8] * x_TRUE + summary(model_high)$summary[1,4]), fill = "orange") +
+  geom_point() +
+  geom_abline(slope = 0.0369, intercept = 0.268, color = 'red') +
+  geom_abline(slope = summary(model_high)$summary[2,6], intercept = summary(model_high)$summary[1,6], color = 'yellow') + 
+  labs(title = "Bayesian model with parameters' errors and high error data") + 
+  xlab("True Temperature") + 
+  ylab("True D47")
+```
+

@@ -13,14 +13,14 @@
     real beta;
     real sigma;
   }
-  
+
   model {
     D47 ~ normal(D47_true, D47_error);
+    D47_true ~ normal(alpha + beta * Temperature, sigma);
     Temperature ~ normal(Temperature_true, Temperature_error);
     Temperature_true ~ normal(0, 0.001);
     alpha ~ normal(0.231, 0.065);
     beta ~ normal(0.039, 0.004);
     sigma ~ gamma(0.001, 0.001);
-    D47 ~ normal(alpha + beta * Temperature, sigma);
+   
   }
-  
