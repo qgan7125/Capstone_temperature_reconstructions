@@ -1,0 +1,186 @@
+---
+title: "York and Diming Regression"
+author: "Quan Gan"
+date: "2/26/2022"
+output: 
+  html_document:
+    toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+library(tidyverse)
+library(knitr)
+library(ggplot2)
+library(IsoplotR)
+library(boot)
+```
+
+## Load data in
+There are three data sets with low, intermediate, and high errors.
+```{r}
+data_low <- read_csv("../Data/Dataset_S1.csv")
+data_intermediate <- read_csv("../Data/Dataset_S2.csv")
+data_high <- read_csv("../Data/Dataset_S3.csv")
+```
+
+## York Regresion
+
+Unified regression algorithm. Given n pairs of measurements of x and y with their 
+uncertainties x_error, y_error. The york function finds the best straight line 
+using the least-squares algorithm of York.
+
+## The functions for bootstrapping 1000 replicates with York models
+```{r}
+# https://www.statmethods.net/advstats/bootstrapping.html
+# Boot library docs
+# calculate the Intercept
+York_model <- function(data, indices) {
+  d <- data[indices,]                   # allows boot to select sample
+  mark <- sample(                       # Mark for train-test
+    c(rep(0, 0.7*nrow(d)), 
+    c(rep(1, 0.3*nrow(d)))))      
+  train <- d[mark == 0,]                # train data
+  test <- d[mark == 1,]                 # test data
+  york_data <- cbind(train$Temperature, train$TempError, train$D47, train$D47error)
+  fit <- york(york_data)                # the York model
+  Intercept <- fit$a['a']
+  Slope <- fit$b['b']
+  train_MSE <- mean((train$D47 - (train$Temperature * Slope + Intercept))^2)    # Train set MSE
+  test_MSE <- mean((test$D47 - (test$Temperature * Slope + Intercept))^2)# Test set MSE
+  return(c(Intercept, Slope, train_MSE, test_MSE))                    # get intercept
+}
+
+```
+
+## Low error data
+```{r}
+# set seed for production
+set.seed(1234)
+
+# bootstrapping with 1000 replications
+york_results_low <- boot(data=data_low, 
+                statistic=York_model,
+                R=1000)
+
+
+cat("Median Intercept:", median(york_results_low$t[,1]))
+cat("Intercept Std. Error:", sd(york_results_low$t[,1]))
+cat("Meidan Slope:", median(york_results_low$t[,2]))
+cat("Slope Std. Error:", sd(york_results_low$t[,2]))
+cat("Median Train MSE:", median(york_results_low$t[,3]))
+cat("Meidan Test MSE:", median(york_results_low$t[,4]))
+print(boot.ci(york_results_low, type="bca", index=1))
+print(boot.ci(york_results_low, type="bca", index=2))
+```
+### Comparing result to the true parameters
+Plot confident interval area of the median slope/intercept of bootstrapping results
+And comparing it to the true slope/intercept
+
+I use the true data points to plot.
+```{r}
+data_low %>% 
+  ggplot(aes(x = x_TRUE, y=y_TRUE)) + 
+  geom_ribbon(aes(ymin = 0.0340 * x_TRUE + 0.3004  , ymax = 0.0433  * x_TRUE + 0.1925), fill = "orange") +
+  geom_point() +
+  geom_abline(slope = 0.0369, intercept = 0.268, color = 'red') +
+  geom_abline(slope = median(york_results_low$t[,2]), intercept = median(york_results_low$t[,1]), color = 'yellow') + 
+  labs(title = "York model with the low error data") + 
+  xlab("True Temperature") + 
+  ylab("True D47")
+```
+
+## Intermediate error data
+```{r}
+# set seed for production
+set.seed(1234)
+
+# bootstrapping with 1000 replications
+york_results_intermediate <- boot(data=data_intermediate, 
+                statistic=York_model,
+                R=1000)
+
+
+cat("Median Intercept:", median(york_results_intermediate$t[,1]))
+cat("Intercept Std. Error:", sd(york_results_intermediate$t[,1]))
+cat("Meidan Slope:", median(york_results_intermediate$t[,2]))
+cat("Slope Std. Error:", sd(york_results_intermediate$t[,2]))
+cat("Median Train MSE:", median(york_results_intermediate$t[,3]))
+cat("Meidan Test MSE:", median(york_results_intermediate$t[,4]))
+print(boot.ci(york_results_intermediate, type="bca", index=1))
+print(boot.ci(york_results_intermediate, type="bca", index=2))
+```
+
+### Comparing result to the true parameters
+Plot confident interval area of the median slope/intercept of bootstrapping results
+And comparing it to the true slope/intercept
+
+I use the true data points to plot.
+```{r}
+data_intermediate %>% 
+  ggplot(aes(x = x_TRUE, y=y_TRUE)) + 
+  geom_ribbon(aes(ymin = 0.0316 * x_TRUE + 0.3321   , ymax = 0.0455   * x_TRUE + 0.1683), fill = "orange") +
+  geom_point() +
+  geom_abline(slope = 0.0369, intercept = 0.268, color = 'red') +
+  geom_abline(slope = median(york_results_intermediate$t[,2]), intercept = median(york_results_intermediate$t[,1]), color = 'yellow') + 
+  labs(title = "York model with the intermediate error data") + 
+  xlab("True Temperature") + 
+  ylab("True D47")
+```
+
+## High error data
+```{r}
+# set seed for production
+set.seed(1234)
+
+# bootstrapping with 1000 replications
+york_results_high <- boot(data=data_high, 
+                statistic=York_model,
+                R=1000)
+
+
+cat("Median Intercept:", median(york_results_high$t[,1]))
+cat("Intercept Std. Error:", sd(york_results_high$t[,1]))
+cat("Meidan Slope:", median(york_results_high$t[,2]))
+cat("Slope Std. Error:", sd(york_results_high$t[,2]))
+cat("Median Train MSE:", median(york_results_high$t[,3]))
+cat("Meidan Test MSE:", median(york_results_high$t[,4]))
+print(boot.ci(york_results_high, type="bca", index=1))
+print(boot.ci(york_results_high, type="bca", index=2))
+```
+
+### Comparing result to the true parameters
+Plot confident interval area of the median slope/intercept of bootstrapping results
+And comparing it to the true slope/intercept
+
+I use the true data points to plot.
+```{r}
+data_high %>% 
+  ggplot(aes(x = x_TRUE, y=y_TRUE)) + 
+  geom_ribbon(aes(ymin = 0.0435 * x_TRUE + 0.1889    , ymax = 0.0644  * x_TRUE -0.0610), fill = "orange") +
+  geom_point() +
+  geom_abline(slope = 0.0369, intercept = 0.268, color = 'red') +
+  geom_abline(slope = median(york_results_high$t[,2]), intercept = median(york_results_high$t[,1]), color = 'yellow') + 
+  labs(title = "York model with the high error data") + 
+  xlab("True Temperature") + 
+  ylab("True D47")
+```
+
+## Median slopes/intercepts VS true parameters
+
+Mean slope/Intercept VS Median slope/Intercept
+```{r}
+medianIntercept <- c(median(york_results_low$t[,1]), median(york_results_intermediate$t[,1]), median(york_results_high$t[,1]))
+sdIntercept <- c(sd(york_results_low$t[,1]), sd(york_results_intermediate$t[,1]), sd(york_results_high$t[,1]))
+medianSlope <- c(median(york_results_low$t[,2]), median(york_results_intermediate$t[,2]), median(york_results_high$t[,2]))
+sdSlope <- c(sd(york_results_low$t[,2]), sd(york_results_intermediate$t[,2]), sd(york_results_high$t[,2]))
+medianTrainMSE <- c(median(york_results_low$t[,3]), median(york_results_intermediate$t[,3]), median(york_results_high$t[,3]))
+medianTestMSE<- c(median(york_results_low$t[,4]), median(york_results_intermediate$t[,4]), median(york_results_high$t[,4]))
+
+mat <- array(c(medianIntercept, sdIntercept, medianSlope, sdSlope, medianTrainMSE, medianTestMSE), dim = c(3, 6))
+colnames(mat) <- c("median_Intercept", "sd_Intercept", "median_Slope", "sd_slope", "median_train_MSE", "median_test_MSE")
+rownames(mat) <- c("Low Error", "Intermediate Error", "High Error")
+mat %>% 
+  kable()
+```
