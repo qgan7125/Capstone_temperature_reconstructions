@@ -1,0 +1,184 @@
+---
+title: "Least Square Monte Carlo"
+author: "Quan Gan"
+date: "3/1/2022"
+output: 
+  html_document:
+    toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+library(data.table)
+library(tidyverse)
+library(Rmisc)
+library(knitr)
+```
+
+## Load data in
+There are three data sets with low, intermediate, and high errors.
+```{r}
+data_low <- read_csv("../Data/Dataset_S1.csv")
+data_intermediate <- read_csv("../Data/Dataset_S2.csv")
+data_high <- read_csv("../Data/Dataset_S3.csv")
+```
+Model least square OLS
+$$
+D47 = \alpha + \beta * Temperature
+$$
+Create Monte Carlo function
+```{r}
+MonteCarlo <- function(seed, n, m, dataInput ){
+  set.seed(seed)
+  # alpha_TRUE <- 0.268    #Intercept
+  # beta_TRUE <- 0.0369    #Slope
+  N <- n                 #Sample Size
+  M <- m                 #Number of experiments/iterations
+  
+  ## Storage
+  intercept_DT <- rep(0, M)
+  slope_DT <- rep(0, M)
+  train_MSE_DT <- rep(0, M)
+  test_MSE_DT <- rep(0, M)
+  
+  ## begin Monte Carlo
+  for (i in 1:M) {
+    U_i = rnorm(N, 0, sqrt(abs(dataInput$D47error)))
+    x_i = rnorm(N, dataInput$x_TRUE, sqrt(abs(dataInput$TempError)))
+    # Y_i = alpha_TRUE + beta_TRUE * x_i + U_i
+    Y_i = rnorm(N, dataInput$y_TRUE, sqrt(abs(dataInput$D47error)))
+    
+    # Formulate data.table
+    data_i = data.table(Y = Y_i, X = x_i)
+    
+    # train test split
+    mark <- sample(                       # Mark for train-test
+      c(rep(0, 0.7*nrow(data_i)), 
+      c(rep(1, 0.3*nrow(data_i)))))      
+    train <- data_i[mark == 0,]                # train data
+    test <- data_i[mark == 1,]                 # test data
+    
+    # Run regressions
+    ols_i <- lm(data = train, Y ~ X)
+    
+    # MSE
+    train_MSE_DT[i] <- mean((train$Y - predict(ols_i))^2)    # Train set MSE
+    test_MSE_DT[i] <- mean((test$Y - predict(ols_i, newdata = test))^2)# Test set MSE
+    
+    # Extract coefficient and save
+    slope_DT[i] <- coef(ols_i)[2]
+    intercept_DT[i] <- coef(ols_i)[1]
+  }
+  
+  # Summary statistics
+  estimate_DT <- data.table(alpha = intercept_DT, beta = slope_DT, train_MSE = train_MSE_DT, test_MSE = test_MSE_DT)
+  
+  return(estimate_DT)
+}
+
+```
+
+```{r}
+result_low <- MonteCarlo(1234, 1000, 1000, data_low)
+
+CI(result_low$alpha)      # Intercept CI
+median(result_low$alpha)  # Intercept 
+CI(result_low$beta)       # Slope CI
+median(result_low$beta)   # Slope
+summary(result_low)
+```
+
+### Comparing result to the true parameters
+Plot confident interval area of the median slope/intercept of bootstrapping results
+And comparing it to the true slope/intercept
+
+I use the true data points to plot.
+```{r}
+data_low %>% 
+  ggplot(aes(x = x_TRUE, y=y_TRUE)) + 
+  geom_ribbon(aes(ymin = CI(result_low$beta)[2] * x_TRUE + CI(result_low$alpha)[1]  , ymax = CI(result_low$beta)[1]  * x_TRUE + CI(result_low$alpha)[2] ), fill = "orange") +
+  geom_point() +
+  geom_abline(slope = 0.0369, intercept = 0.268, color = 'red') +
+  geom_abline(slope = median(result_low$beta), intercept = median(result_low$alpha), color = 'yellow') + 
+  labs(title = "OLS model with the low error data") + 
+  xlab("True Temperature") + 
+  ylab("True D47")
+```
+```{r}
+result_intermediate <- MonteCarlo(1234, 1000, 1000, data_intermediate)
+
+CI(result_intermediate$alpha)      # Intercept CI
+median(result_intermediate$alpha)  # Intercept 
+CI(result_intermediate$beta)       # Slope CI
+median(result_intermediate$beta)   # Slope
+summary(result_intermediate)
+```
+
+### Comparing result to the true parameters
+Plot confident interval area of the median slope/intercept of bootstrapping results
+And comparing it to the true slope/intercept
+
+I use the true data points to plot.
+```{r}
+data_intermediate %>% 
+  ggplot(aes(x = x_TRUE, y=y_TRUE)) + 
+  geom_ribbon(aes(ymin = CI(result_intermediate$beta)[2] * x_TRUE + CI(result_intermediate$alpha)[1]  , ymax = CI(result_intermediate$beta)[1]  * x_TRUE + CI(result_intermediate$alpha)[2] ), fill = "orange") +
+  geom_point() +
+  geom_abline(slope = 0.0369, intercept = 0.268, color = 'red') +
+  geom_abline(slope = median(result_intermediate$beta), intercept = median(result_intermediate$alpha), color = 'yellow') + 
+  labs(title = "OLS model with the intermediate error data") + 
+  xlab("True Temperature") + 
+  ylab("True D47")
+```
+
+```{r}
+result_high <- MonteCarlo(1234, 1000, 1000, data_high)
+
+CI(result_high$alpha)      # Intercept CI
+median(result_high$alpha)  # Intercept 
+CI(result_high$beta)       # Slope CI
+median(result_high$beta)   # Slope
+summary(result_high)
+```
+
+### Comparing result to the true parameters
+Plot confident interval area of the median slope/intercept of bootstrapping results
+And comparing it to the true slope/intercept
+
+I use the true data points to plot.
+```{r}
+data_high %>% 
+  ggplot(aes(x = x_TRUE, y=y_TRUE)) + 
+  geom_ribbon(aes(ymin = CI(result_high$beta)[2] * x_TRUE + CI(result_high$alpha)[1]  , ymax = CI(result_high$beta)[1]  * x_TRUE + CI(result_high$alpha)[2] ), fill = "orange") +
+  geom_point() +
+  geom_abline(slope = 0.0369, intercept = 0.268, color = 'red') +
+  geom_abline(slope = median(result_high$beta), intercept = median(result_high$alpha), color = 'yellow') + 
+  labs(title = "OLS model with the high error data") + 
+  xlab("True Temperature") + 
+  ylab("True D47")
+```
+## Median slopes/intercepts VS true parameters
+
+Mean slope/Intercept VS Median slope/Intercept
+```{r}
+medianIntercept <- c(median(result_low$alpha), median(result_intermediate$alpha), median(result_high$alpha))
+sdIntercept <- c(sd(result_low$alpha), sd(result_intermediate$alpha), sd(result_high$alpha))
+medianSlope <- c(median(result_low$beta), median(result_intermediate$beta), median(result_high$beta))
+sdSlope <- c(sd(result_low$beta), sd(result_intermediate$beta), sd(result_high$beta))
+medianTrainMSE <- c(median(result_low$train_MSE), median(result_intermediate$train_MSE), median(result_high$train_MSE))
+medianTestMSE<- c(median(result_low$test_MSE), median(result_intermediate$test_MSE), median(result_high$test_MSE))
+
+mat <- array(c(medianIntercept, sdIntercept, medianSlope, sdSlope, medianTrainMSE, medianTestMSE), dim = c(3, 6))
+colnames(mat) <- c("median_Intercept", "sd_Intercept", "median_Slope", "sd_slope", "median_train_MSE", "median_test_MSE")
+rownames(mat) <- c("Low Error", "Intermediate Error", "High Error")
+mat %>% 
+  kable()
+```
+
+
+
+
+
+
+
