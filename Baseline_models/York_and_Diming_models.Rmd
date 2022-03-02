@@ -241,7 +241,7 @@ data_low %>%
   geom_point() +
   geom_abline(slope = 0.0369, intercept = 0.268, color = 'red') +
   geom_abline(slope = median(deming_results_low$t[,2]), intercept = median(deming_results_low$t[,1]), color = 'yellow') + 
-  labs(title = "York model with the low error data") + 
+  labs(title = "Deming model with the low error data") + 
   xlab("True Temperature") + 
   ylab("True D47")
 ```
@@ -280,7 +280,7 @@ data_intermediate %>%
   geom_point() +
   geom_abline(slope = 0.0369, intercept = 0.268, color = 'red') +
   geom_abline(slope = median(deming_results_intermediate$t[,2]), intercept = median(deming_results_intermediate$t[,1]), color = 'yellow') + 
-  labs(title = "York model with the intermediate error data") + 
+  labs(title = "Deming model with the intermediate error data") + 
   xlab("True Temperature") + 
   ylab("True D47")
 ```
@@ -315,11 +315,29 @@ I use the true data points to plot.
 ```{r}
 data_high %>% 
   ggplot(aes(x = x_TRUE, y=y_TRUE)) + 
-  geom_ribbon(aes(ymin = 0.0435 * x_TRUE + 0.1889    , ymax = 0.0644   * x_TRUE - 0.0609), fill = "orange") +
+  geom_ribbon(aes(ymin = 0.0435 * x_TRUE + 0.1889 , ymax = 0.0644   * x_TRUE - 0.0609), fill = "orange") +
   geom_point() +
   geom_abline(slope = 0.0369, intercept = 0.268, color = 'red') +
   geom_abline(slope = median(deming_results_high$t[,2]), intercept = median(deming_results_high$t[,1]), color = 'yellow') + 
-  labs(title = "York model with the high error data") + 
+  labs(title = "Deming model with the high error data") + 
   xlab("True Temperature") + 
   ylab("True D47")
+```
+
+## Median slopes/intercepts VS true parameters
+
+Mean slope/Intercept VS Median slope/Intercept
+```{r}
+medianIntercept <- c(median(deming_results_low$t[,1]), median(deming_results_intermediate$t[,1]), median(deming_results_high$t[,1]))
+sdIntercept <- c(sd(deming_results_low$t[,1]), sd(deming_results_intermediate$t[,1]), sd(deming_results_high$t[,1]))
+medianSlope <- c(median(deming_results_low$t[,2]), median(deming_results_intermediate$t[,2]), median(deming_results_high$t[,2]))
+sdSlope <- c(sd(deming_results_low$t[,2]), sd(deming_results_intermediate$t[,2]), sd(deming_results_high$t[,2]))
+medianTrainMSE <- c(median(deming_results_low$t[,3]), median(deming_results_intermediate$t[,3]), median(deming_results_high$t[,3]))
+medianTestMSE<- c(median(deming_results_low$t[,4]), median(deming_results_intermediate$t[,4]), median(deming_results_high$t[,4]))
+
+mat <- array(c(medianIntercept, sdIntercept, medianSlope, sdSlope, medianTrainMSE, medianTestMSE), dim = c(3, 6))
+colnames(mat) <- c("median_Intercept", "sd_Intercept", "median_Slope", "sd_slope", "median_train_MSE", "median_test_MSE")
+rownames(mat) <- c("Low Error", "Intermediate Error", "High Error")
+mat %>% 
+  kable()
 ```
