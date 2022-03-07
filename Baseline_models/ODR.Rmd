@@ -1,0 +1,171 @@
+---
+title: "ODR"
+author: "Quan Gan"
+date: "3/5/2022"
+output: 
+  html_document:
+    toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+library(tidyverse)
+library(knitr)
+library(ggplot2)
+library(pracma)
+library(boot)
+```
+
+## Load data in
+There are three data sets with low, intermediate, and high errors.
+```{r}
+data_low <- read_csv("../Data/Dataset_S1.csv")
+data_intermediate <- read_csv("../Data/Dataset_S2.csv")
+data_high <- read_csv("../Data/Dataset_S3.csv")
+```
+## The functions for bootstrapping 1000 replicates with OLS models
+```{r}
+# https://www.statmethods.net/advstats/bootstrapping.html
+# Boot library docs
+# calculate the Intercept
+ODR <- function(data, indices) {
+  d <- data[indices,]                   # allows boot to select sample
+  mark <- sample(                       # Mark for train-test
+    c(rep(0, 0.7*nrow(d)), 
+    c(rep(1, 0.3*nrow(d)))))      
+  train <- d[mark == 0,]                # train data
+  test <- d[mark == 1,]                 # test data
+  fit <- odregress(train$Temperature, train$D47)        # the OLS model
+  Slope <- fit$coef[1]
+  Intercept <- fit$coef[2]
+  train_MSE <- mean((train$D47 - (train$Temperature * Slope + Intercept))^2)    # Train set MSE
+  test_MSE <- mean((test$D47 - (test$Temperature * Slope + Intercept))^2)# Test set MSE
+  return(c(Intercept, Slope, train_MSE, test_MSE))                    # get intercept
+}
+
+```
+
+## Data Low Error
+```{r}
+# set seed for production
+set.seed(1234)
+
+# bootstrapping with 1000 replications
+results_low <- boot(data=data_low, 
+                statistic=ODR,
+                R=1000)
+
+cat("Median Intercept:", median(results_low$t[,1]))
+cat("Intercept Std. Error:", sd(results_low$t[,1]))
+cat("Meidan Slope:", median(results_low$t[,2]))
+cat("Slope Std. Error:", sd(results_low$t[,2]))
+cat("Median Train MSE:", median(results_low$t[,3]))
+cat("Meidan Test MSE:", median(results_low$t[,4]))
+print(boot.ci(results_low, type="bca", index=1))
+print(boot.ci(results_low, type="bca", index=2))
+```
+#### Comparing result to the true parameters
+Plot confident interval area of the median slope/intercept of bootstrapping results
+And comparing it to the true slope/intercept
+
+I use the true data points to plot.
+```{r}
+data_low %>% 
+  ggplot(aes(x = x_TRUE, y=y_TRUE)) + 
+  geom_ribbon(aes(ymin = 0.0361 * x_TRUE + 0.2765  , ymax = 0.0385  * x_TRUE + 0.2482), fill = "orange") +
+  geom_point() +
+  geom_abline(slope = 0.0369, intercept = 0.268, color = 'red') +
+  geom_abline(slope = median(results_low$t[,2]), intercept = median(results_low$t[,1]), color = 'yellow') + 
+  labs(title = "ODR model with the low error data") + 
+  xlab("True Temperature") + 
+  ylab("True D47")
+```
+
+## Data Intermediate Error
+```{r}
+# set seed for production
+set.seed(1234)
+
+# bootstrapping with 1000 replications
+results_intermediate <- boot(data=data_intermediate, 
+                statistic=ODR,
+                R=1000)
+
+cat("Median Intercept:", median(results_intermediate$t[,1]))
+cat("Intercept Std. Error:", sd(results_intermediate$t[,1]))
+cat("Meidan Slope:", median(results_intermediate$t[,2]))
+cat("Slope Std. Error:", sd(results_intermediate$t[,2]))
+cat("Median Train MSE:", median(results_intermediate$t[,3]))
+cat("Meidan Test MSE:", median(results_intermediate$t[,4]))
+print(boot.ci(results_intermediate, type="bca", index=1))
+print(boot.ci(results_intermediate, type="bca", index=2))
+```
+#### Comparing result to the true parameters
+Plot confident interval area of the median slope/intercept of bootstrapping results
+And comparing it to the true slope/intercept
+
+I use the true data points to plot.
+```{r}
+data_intermediate %>% 
+  ggplot(aes(x = x_TRUE, y=y_TRUE)) + 
+  geom_ribbon(aes(ymin = 0.0325 * x_TRUE + 0.3212  , ymax = 0.0364  * x_TRUE + 0.2756), fill = "orange") +
+  geom_point() +
+  geom_abline(slope = 0.0369, intercept = 0.268, color = 'red') +
+  geom_abline(slope = median(results_intermediate$t[,2]), intercept = median(results_intermediate$t[,1]), color = 'yellow') + 
+  labs(title = "ODR model with the intermediate error data") + 
+  xlab("True Temperature") + 
+  ylab("True D47")
+```
+## Data High Error
+```{r}
+# set seed for production
+set.seed(1234)
+
+# bootstrapping with 1000 replications
+results_high <- boot(data=data_high, 
+                statistic=ODR,
+                R=1000)
+
+cat("Median Intercept:", median(results_high$t[,1]))
+cat("Intercept Std. Error:", sd(results_high$t[,1]))
+cat("Meidan Slope:", median(results_high$t[,2]))
+cat("Slope Std. Error:", sd(results_high$t[,2]))
+cat("Median Train MSE:", median(results_high$t[,3]))
+cat("Meidan Test MSE:", median(results_high$t[,4]))
+print(boot.ci(results_high, type="bca", index=1))
+print(boot.ci(results_high, type="bca", index=2))
+```
+#### Comparing result to the true parameters
+Plot confident interval area of the median slope/intercept of bootstrapping results
+And comparing it to the true slope/intercept
+
+I use the true data points to plot.
+```{r}
+data_high %>% 
+  ggplot(aes(x = x_TRUE, y=y_TRUE)) + 
+  geom_ribbon(aes(ymin = 0.0289 * x_TRUE + 0.3640  , ymax =  0.0348  * x_TRUE +  0.2924), fill = "orange") +
+  geom_point() +
+  geom_abline(slope = 0.0369, intercept = 0.268, color = 'red') +
+  geom_abline(slope = median(results_high$t[,2]), intercept = median(results_high$t[,1]), color = 'yellow') + 
+  labs(title = "ODR model with the high error data") + 
+  xlab("True Temperature") + 
+  ylab("True D47")
+```
+## Median slopes/intercepts VS true parameters
+
+Mean slope/Intercept VS Median slope/Intercept
+```{r}
+medianIntercept <- c(median(results_low$t[,1]), median(results_intermediate$t[,1]), median(results_high$t[,1]))
+sdIntercept <- c(sd(results_low$t[,1]), sd(results_intermediate$t[,1]), sd(results_high$t[,1]))
+medianSlope <- c(median(results_low$t[,2]), median(results_intermediate$t[,2]), median(results_high$t[,2]))
+sdSlope <- c(sd(results_low$t[,2]), sd(results_intermediate$t[,2]), sd(results_high$t[,2]))
+medianTrainMSE <- c(median(results_low$t[,3]), median(results_intermediate$t[,3]), median(results_high$t[,3]))
+medianTestMSE<- c(median(results_low$t[,4]), median(results_intermediate$t[,4]), median(results_high$t[,4]))
+
+mat <- array(c(medianIntercept, sdIntercept, medianSlope, sdSlope, medianTrainMSE, medianTestMSE), dim = c(3, 6))
+colnames(mat) <- c("median_Intercept", "sd_Intercept", "median_Slope", "sd_slope", "median_train_MSE", "median_test_MSE")
+rownames(mat) <- c("Low Error", "Intermediate Error", "High Error")
+mat %>% 
+  kable()
+```
