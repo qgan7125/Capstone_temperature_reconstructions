@@ -20,59 +20,82 @@ library(knitr)
 ## load data in
 There are three data sets with low, intermediate, and high errors.
 ```{r}
-data_low <- read_csv("../Data/Dataset_S1.csv")
-data_intermediate <- read_csv("../Data/Dataset_S2.csv")
-data_high <- read_csv("../Data/Dataset_S3.csv")
+data_low <- read_csv("../Data/Dataset_S1_Mar8.csv")
+data_intermediate <- read_csv("../Data/Dataset_S2_Mar8.csv")
+data_high <- read_csv("../Data/Dataset_S3_Mar8.csv")
 ```
-## The functions for bootstrapping 1000 replicates with OLS models
+## The helper functions for bootstrapping 1000 replicates with OLS models and data visulization.
 ```{r}
 # https://www.statmethods.net/advstats/bootstrapping.html
 # Boot library docs
-# calculate the Intercept
-OLS <- function(formula, data, indices) {
-  d <- data[indices,]                   # allows boot to select sample
-  mark <- sample(                       # Mark for train-test
+# calculate the coefficient
+OLS_boot <- function(formula, data, indices) {
+  d <- data[indices,]                                 # allows boot to select sample
+  mark <- sample(                                     # Mark for train-test
     c(rep(0, 0.7*nrow(d)), 
     c(rep(1, 0.3*nrow(d)))))      
-  train <- d[mark == 0,]                # train data
-  test <- d[mark == 1,]                 # test data
-  fit <- lm(formula, data=train)        # the OLS model
-  train_MSE <- mean((train$D47 - predict(fit))^2)    # Train set MSE
+  train <- d[mark == 0,]                              # train data
+  test <- d[mark == 1,]                               # test data
+  fit <- lm(formula, data=train)                      # the OLS model
+  train_MSE <- mean((train$D47 - predict(fit))^2)     # Train set MSE
   test_MSE <- mean((test$D47 - predict(fit, newdata = test))^2)# Test set MSE
   return(c(coef(fit), train_MSE, test_MSE))                    # get intercept
+}
+
+# The OLS function with bootstrapping
+OLS <- function(seed, statistic, dataSet, formula, replicate){
+  set.seed(seed)
+  results <- boot(data = dataSet,
+                  statistic = statistic,
+                  R = replicate,
+                  formula = formula)
+  
+  CI_Intecept <- boot.ci(results, type="bca", index=1)
+  Intercept_names <- c("Median Intercept", "Intercept Std. Error", "2.5%", "92.5%")
+  Intercept_values <- c(median(results$t[,1]), sd(results$t[,1]), CI_Intecept$bca[4], CI_Intecept$bca[5])
+  names(Intercept_values) <- Intercept_names
+  
+  CI_Slope <- boot.ci(results, type="bca", index=2)
+  Slope_names <- c("Median Slope", "Slope Std. Error", "2.5%", "92.5%")
+  Slope_values <- c(median(results$t[,2]), sd(results$t[,2]), CI_Slope$bca[4], CI_Slope$bca[5])
+  names(Slope_values) <- Slope_names
+  
+  MSE_names <- c("Median Train MSE", "Median Test MSE")
+  MSE_values <- c(median(results$t[,3]), median(results$t[,4]))
+  names(MSE_values) <- MSE_names
+  
+  
+  Intercept_values %>% kable()
+  Slope_values %>% kable()
+  MSE_values %>% kable()
+  
+  return (c(Intercept_values, Slope_values, MSE_values))
+}
+
+# create data visualization
+createPlot <- function(data, result, title, caption) {
+  data %>% 
+    ggplot(aes(x = x_TRUE, y=y_TRUE)) + 
+    geom_ribbon(aes(ymin = result[7] * x_TRUE + result[4] , ymax = result[8] * x_TRUE + result[3]), fill = "orange") +
+    geom_point() +
+    geom_abline(slope = 0.0369, intercept = 0.268, color = 'red') +
+    geom_abline(slope = result[5], intercept = result[1], color = 'yellow') + 
+    labs(title = title,
+         caption = caption) + 
+    xlab("True Temperature") + 
+    ylab("True D47")
 }
 
 ```
 
 ## Low error bootstrapping results
 
-### Intercept for low error
 ```{r}
+result_low <- OLS(1234, OLS_boot, data_low, D47~Temperature, 1000)
 
-# set seed for production
-set.seed(1234)
-
-# bootstrapping with 1000 replications
-results_low <- boot(data=data_low, 
-                statistic=OLS,
-                R=1000,
-                formula=D47~Temperature)
-
-
-plot(results_low, index=1)
-plot(results_low, index=2)
-
-
-cat("Median Intercept:", median(results_low$t[,1]))
-cat("Intercept Std. Error:", sd(results_low$t[,1]))
-cat("Meidan Slope:", median(results_low$t[,2]))
-cat("Slope Std. Error:", sd(results_low$t[,2]))
-cat("Median Train MSE:", median(results_low$t[,3]))
-cat("Meidan Test MSE:", median(results_low$t[,4]))
-print(boot.ci(results_low, type="bca", index=1))
-print(boot.ci(results_low, type="bca", index=2))
-
+rbind(result_low) %>% kable()
 ```
+
 
 ### Comparing result to the true parameters
 Plot confident interval area of the median slope/intercept of bootstrapping results
@@ -80,55 +103,19 @@ And comparing it to the true slope/intercept
 
 I use the true data points to plot.
 ```{r}
-data_low %>% 
-  ggplot(aes(x = x_TRUE, y=y_TRUE)) + 
-  geom_ribbon(aes(ymin = 0.0361 * x_TRUE + 0.2766 , ymax = 0.0385 * x_TRUE + 0.2483), fill = "orange") +
-  geom_point() +
-  geom_abline(slope = 0.0369, intercept = 0.268, color = 'red') +
-  geom_abline(slope = median(results_low$t[,2]), intercept = median(results_low$t[,1]), color = 'yellow') + 
-  labs(title = "OLS model with the low error data") + 
-  xlab("True Temperature") + 
-  ylab("True D47")
+createPlot(data_low, 
+           result_low, 
+           "OLS model with the low error data", 
+           "OLS model with the low error data. Red line as true coefficient. Yellow is OLS fitted coefficient")
 ```
-Mean slope/intercept VS Median slope/intercept
-```{r}
-data_low %>% 
-  ggplot(aes(x = x_TRUE, y=y_TRUE)) +
-  geom_point() +
-  geom_abline(slope = 0.0369, intercept = 0.268, color = 'red') +
-  geom_abline(slope = median(results_low$t[,2]), intercept = median(results_low$t[,1]), color = 'yellow') +
-  geom_abline(slope = mean(results_low$t[,2]), intercept = mean(results_low$t[,1]), color = 'purple') 
-```
-
 
 ## Intermediate error bootstrapping results
 
-### Intercept for Intermediate error
 ```{r}
 
-# set seed for production
-set.seed(1234)
+result_intermediate <- OLS(1234, OLS_boot, data_intermediate, D47~Temperature, 1000)
 
-# bootstrapping with 1000 replications
-results_intermediate <- boot(data=data_intermediate, 
-                statistic=OLS,
-                R=1000,
-                formula=D47~Temperature)
-
-
-plot(results_intermediate, index=1)
-plot(results_intermediate, index=2)
-
-
-cat("Median Intercept:", median(results_intermediate$t[,1]))
-cat("Intercept Std. Error:", sd(results_intermediate$t[,1]))
-cat("Meidan Slope:", median(results_intermediate$t[,2]))
-cat("Slope Std. Error:", sd(results_intermediate$t[,2]))
-cat("Median Train MSE:", median(results_intermediate$t[,3]))
-cat("Meidan Test MSE:", median(results_intermediate$t[,4]))
-print(boot.ci(results_intermediate, type="bca", index=1))
-print(boot.ci(results_intermediate, type="bca", index=2))
-
+rbind(result_intermediate) %>% kable()
 ```
 
 ### Comparing result to the true parameters
@@ -137,56 +124,20 @@ And comparing it to the true slope/intercept
 
 I use the true data points to plot.
 ```{r}
-data_intermediate %>% 
-  ggplot(aes(x = x_TRUE, y=y_TRUE)) + 
-  geom_ribbon(aes(ymin = 0.0325 * x_TRUE + 0.3215 , ymax = 0.0364  * x_TRUE + 0.2759), fill = "orange") +
-  geom_point() +
-  geom_abline(slope = 0.0369, intercept = 0.268, color = 'red') +
-  geom_abline(slope = median(results_intermediate$t[,2]), intercept = median(results_intermediate$t[,1]), color = 'yellow') +
-  labs(title = "OLS model with the intermediate error data") + 
-  xlab("True Temperature") + 
-  ylab("True D47")
+createPlot(data_intermediate, 
+           result_intermediate, 
+           "OLS model with the intermediate error data", 
+           "OLS model with the intermediate error data. Red line as true coefficient. Yellow is OLS fitted coefficient")
 ```
-Mean slope/intercept VS Median slope/intercept
-```{r}
-data_intermediate %>% 
-  ggplot(aes(x = x_TRUE, y=y_TRUE)) +
-  geom_point() +
-  geom_abline(slope = 0.0369, intercept = 0.268, color = 'red') +
-  geom_abline(slope = median(results_intermediate$t[,2]), intercept = median(results_intermediate$t[,1]), color = 'yellow') +
-  geom_abline(slope = mean(results_intermediate$t[,2]), intercept = mean(results_intermediate$t[,1]), color = 'purple')
-```
-
 
 ## High error bootstrapping results
 
-### Intercept for high error
 ```{r}
 
 
-# set seed for production
-set.seed(1234)
+result_high <- OLS(1234, OLS_boot, data_high, D47~Temperature, 1000)
 
-# bootstrapping with 1000 replications
-results_high <- boot(data=data_high, 
-                statistic=OLS,
-                R=1000,
-                formula=D47~Temperature)
-
-
-plot(results_high, index=1)
-plot(results_high, index=2)
-
-cat("Median Intercept:", median(results_high$t[,1]))
-cat("Intercept Std. Error:", sd(results_high$t[,1]))
-cat("Meidan Slope:", median(results_high$t[,2]))
-cat("Slope Std. Error:", sd(results_high$t[,2]))
-cat("Median Train MSE:", median(results_high$t[,3]))
-cat("Meidan Test MSE:", median(results_high$t[,4]))
-print(boot.ci(results_high, type="bca", index=1))
-print(boot.ci(results_high, type="bca", index=2))
-
-
+rbind(result_high) %>% kable()
 ```
 
 
@@ -196,43 +147,17 @@ And comparing it to the true slope/intercept
 
 I use the true data points to plot.
 ```{r}
-data_high %>% 
-  ggplot(aes(x = x_TRUE, y=y_TRUE)) + 
-  geom_ribbon(aes(ymin = 0.0289 * x_TRUE + 0.3644  , ymax = 0.0347   * x_TRUE + 0.2929), fill = "orange") +
-  geom_point() +
-  geom_abline(slope = 0.0369, intercept = 0.268, color = 'red') +
-  geom_abline(slope = median(results_high$t[,2]), intercept = median(results_high$t[,1]), color = 'yellow') + 
-  labs(title = "OLS model with the high error data") + 
-  xlab("True Temperature") + 
-  ylab("True D47")
+createPlot(data_high, 
+           result_high, 
+           "OLS model with the intermediate error data", 
+           "OLS model with the intermediate error data. Red line as true coefficient. Yellow is OLS fitted coefficient")
 ```
 
-Mean slope/intercept VS Median slope/intercept
+
+## Results across different data sets
+
 ```{r}
-data_high %>% 
-  ggplot(aes(x = x_TRUE, y=y_TRUE)) +
-  geom_point() +
-  geom_abline(slope = 0.0369, intercept = 0.268, color = 'red') +
-  geom_abline(slope = median(results_high$t[,2]), intercept = median(results_high$t[,1]), color = 'yellow') +
-  geom_abline(slope = mean(results_high$t[,2]), intercept = mean(results_high$t[,1]), color = 'purple')
-```
-
-## Median slopes/intercepts VS true parameters
-
-Mean slope/Intercept VS Median slope/Intercept
-```{r}
-medianIntercept <- c(median(results_low$t[,1]), median(results_intermediate$t[,1]), median(results_high$t[,1]))
-sdIntercept <- c(sd(results_low$t[,1]), sd(results_intermediate$t[,1]), sd(results_high$t[,1]))
-medianSlope <- c(median(results_low$t[,2]), median(results_intermediate$t[,2]), median(results_high$t[,2]))
-sdSlope <- c(sd(results_low$t[,2]), sd(results_intermediate$t[,2]), sd(results_high$t[,2]))
-medianTrainMSE <- c(median(results_low$t[,3]), median(results_intermediate$t[,3]), median(results_high$t[,3]))
-medianTestMSE<- c(median(results_low$t[,4]), median(results_intermediate$t[,4]), median(results_high$t[,4]))
-
-mat <- array(c(medianIntercept, sdIntercept, medianSlope, sdSlope, medianTrainMSE, medianTestMSE), dim = c(3, 6))
-colnames(mat) <- c("median_Intercept", "sd_Intercept", "median_Slope", "sd_slope", "median_train_MSE", "median_test_MSE")
-rownames(mat) <- c("Low Error", "Intermediate Error", "High Error")
-mat %>% 
-  kable()
+rbind(result_low, result_intermediate, result_high) %>% kable()
 ```
 By the OLS model, we could know when there is a low error in the data. The OLS 
 could produce the slope and intercept close to the true parameters but with the 
