@@ -56,7 +56,7 @@ bprior <- c(
   prior(gamma(0.001, 0.001), class = sigma)
 )
 
-bform <- bf(D47 | mi(abs(D47error)) ~ 1 + me(Temperature, abs(TempError)))
+bform <- bf(y_TRUE | mi(abs(D47error)) ~ 1 + me(x_TRUE, abs(TempError)))
 
 get_prior(bform, data = data_low, prior = bprior)
 

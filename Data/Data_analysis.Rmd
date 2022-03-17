@@ -1,0 +1,108 @@
+---
+title: "Data"
+author: "Quan Gan"
+date: "3/7/2022"
+output: 
+  html_document:
+    toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(patchwork)
+```
+
+## load data in
+There are three data sets with low, intermediate, and high errors.
+```{r}
+data_low <- read_csv("./Data/Dataset_S1_Mar8.csv")
+data_intermediate <- read_csv("./Data/Dataset_S2_Mar8.csv")
+data_high <- read_csv("./Data/Dataset_S3_Mar8.csv")
+```
+```{r}
+Temp_low_distribution <- data_low %>% 
+  ggplot(aes(x= TempError)) + 
+  geom_histogram(aes(y=..density..),
+                colour="black", 
+                fill="white")+
+  geom_density() +
+  xlab("Measurement Error") + 
+  ylab("Density") + 
+  labs(title = "Low Error Data") +
+  theme(plot.title = element_text(size=10))
+
+Temp_intermediate_distribution <- data_intermediate %>% 
+  ggplot(aes(x= TempError)) + 
+  geom_histogram(aes(y=..density..),
+                colour="black", 
+                fill="white")+
+  geom_density() +
+  xlab("Measurement Error") + 
+  ylab("Density") +
+  labs(title = "Intermediate Error Data") +
+  theme(plot.title = element_text(size=10))
+
+Temp_high_distribution <- data_high %>% 
+  ggplot(aes(x= TempError)) + 
+  geom_histogram(aes(y=..density..),
+                colour="black", 
+                fill="white")+
+  geom_density() +
+  xlab("Measurement Error") + 
+  ylab("Density") + 
+  labs(title = "High Error Data") +
+  theme(plot.title = element_text(size=10))
+
+TempError_distribution <- Temp_low_distribution / Temp_intermediate_distribution / Temp_high_distribution +
+  plot_annotation(title = bquote(10^6/T^2~"Measurement Error"),
+                  caption = bquote(10^6/T^2~"Measurement Error distributons across different data sets"))
+
+TempError_distribution
+```
+
+
+```{r}
+D47_low_distribution <- data_low %>% 
+  ggplot(aes(x= y_TRUE - D47)) + 
+  geom_histogram(aes(y=..density..),
+                colour="black", 
+                fill="white")+
+  geom_density() +
+  xlab("Measurement Error") + 
+  ylab("Density") + 
+  labs(title = "Low Error Data") +
+  theme(plot.title = element_text(size=10))
+
+D47_intermediate_distribution <- data_intermediate %>% 
+  ggplot(aes(x= y_TRUE - D47)) + 
+  geom_histogram(aes(y=..density..),
+                colour="black", 
+                fill="white")+
+  geom_density() +
+  xlab("Measurement Error") + 
+  ylab("Density") + 
+  labs(title = "Intermediate Error Data") +
+  theme(plot.title = element_text(size=10))
+
+D47_high_distribution <- data_high %>% 
+  ggplot(aes(x= y_TRUE - D47)) + 
+  geom_histogram(aes(y=..density..),
+                colour="black", 
+                fill="white")+
+  geom_density() +
+  xlab("Measurement Error") + 
+  ylab("Density") + 
+  labs(title = "High Error Data") +
+  theme(plot.title = element_text(size=10))
+
+D47Error_distribution <- D47_low_distribution / D47_intermediate_distribution / D47_high_distribution +
+    plot_annotation(title = bquote(D47~"Measurement Error"),
+                  caption = bquote(D47~"Measurement Error distributons across different data sets"))
+
+D47Error_distribution
+```
+
