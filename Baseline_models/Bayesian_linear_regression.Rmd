@@ -20,9 +20,9 @@ options(mc.cores = parallel::detectCores())
 ## Load data in
 There are three data sets with low, intermediate, and high errors.
 ```{r}
-data_low <- read_csv("../Data/Dataset_S1.csv")
-data_intermediate <- read_csv("../Data/Dataset_S2.csv")
-data_high <- read_csv("../Data/Dataset_S3.csv")
+data_low <- read_csv("../Data/Dataset_S1_Mar8.csv")
+data_intermediate <- read_csv("../Data/Dataset_S2_Mar8.csv")
+data_high <- read_csv("../Data/Dataset_S3_Mar8.csv")
 ```
 
 ## Bayesian linear regression
