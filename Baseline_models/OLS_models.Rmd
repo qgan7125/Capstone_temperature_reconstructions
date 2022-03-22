@@ -133,8 +133,6 @@ createPlot(data_intermediate,
 ## High error bootstrapping results
 
 ```{r}
-
-
 result_high <- OLS(1234, OLS_boot, data_high, D47~Temperature, 1000)
 
 rbind(result_high) %>% kable()
@@ -149,8 +147,8 @@ I use the true data points to plot.
 ```{r}
 createPlot(data_high, 
            result_high, 
-           "OLS model with the intermediate error data", 
-           "OLS model with the intermediate error data. Red line as true coefficient. Yellow is OLS fitted coefficient")
+           "OLS model with the high error data", 
+           "OLS model with the high error data. Red line as true coefficient. Yellow is OLS fitted coefficient")
 ```
 
 
