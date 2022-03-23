@@ -215,12 +215,12 @@ ODR &lt;- function(seed, statistic, dataSet, replicate){
   
   CI_Intecept &lt;- boot.ci(results, type=&quot;bca&quot;, index=1)
   Intercept_names &lt;- c(&quot;Median Intercept&quot;, &quot;Intercept Std. Error&quot;, &quot;2.5%&quot;, &quot;92.5%&quot;)
-  Intercept_values &lt;- c(median(results$t[,1]), sd(results$t[,1]), CI_Intecept$bca[4], CI_Intecept$bca[5])
+  Intercept_values &lt;- c(median(results$t[,1]), sd(results$t[,1]) / sqrt(length(results$t[,1])), CI_Intecept$bca[4], CI_Intecept$bca[5])
   names(Intercept_values) &lt;- Intercept_names
   
   CI_Slope &lt;- boot.ci(results, type=&quot;bca&quot;, index=2)
   Slope_names &lt;- c(&quot;Median Slope&quot;, &quot;Slope Std. Error&quot;, &quot;2.5%&quot;, &quot;92.5%&quot;)
-  Slope_values &lt;- c(median(results$t[,2]), sd(results$t[,2]), CI_Slope$bca[4], CI_Slope$bca[5])
+  Slope_values &lt;- c(median(results$t[,2]), sd(results$t[,2]) / sqrt(length(results$t[,2])), CI_Slope$bca[4], CI_Slope$bca[5])
   names(Slope_values) &lt;- Slope_names
   
   MSE_names &lt;- c(&quot;Median Train MSE&quot;, &quot;Median Test MSE&quot;)
@@ -287,11 +287,11 @@ rbind(result_low) %&gt;% kable()</code></pre>
 <tr class="odd">
 <td align="left">result_low</td>
 <td align="right">0.264025</td>
-<td align="right">0.0022551</td>
+<td align="right">7.13e-05</td>
 <td align="right">0.2611901</td>
 <td align="right">0.269623</td>
 <td align="right">0.0371875</td>
-<td align="right">0.0001807</td>
+<td align="right">5.7e-06</td>
 <td align="right">0.0367498</td>
 <td align="right">0.0374626</td>
 <td align="right">0.0001589</td>
@@ -348,11 +348,11 @@ rbind(result_intermediate) %&gt;% kable()</code></pre>
 <tr class="odd">
 <td align="left">result_intermediate</td>
 <td align="right">0.2623764</td>
-<td align="right">0.0043797</td>
+<td align="right">0.0001385</td>
 <td align="right">0.2547746</td>
 <td align="right">0.2722121</td>
 <td align="right">0.037291</td>
-<td align="right">0.0003518</td>
+<td align="right">1.11e-05</td>
 <td align="right">0.0365601</td>
 <td align="right">0.0379582</td>
 <td align="right">0.0005813</td>
@@ -405,11 +405,11 @@ rbind(result_high) %&gt;% kable()</code></pre>
 <tr class="odd">
 <td align="left">result_high</td>
 <td align="right">0.2598525</td>
-<td align="right">0.0054634</td>
+<td align="right">0.0001728</td>
 <td align="right">0.2492964</td>
 <td align="right">0.2711125</td>
 <td align="right">0.0375032</td>
-<td align="right">0.0004389</td>
+<td align="right">1.39e-05</td>
 <td align="right">0.0366011</td>
 <td align="right">0.0383757</td>
 <td align="right">0.000903</td>
@@ -462,11 +462,11 @@ rbind(result_high) %&gt;% kable()</code></pre>
 <tr class="odd">
 <td align="left">result_low</td>
 <td align="right">0.2640250</td>
-<td align="right">0.0022551</td>
+<td align="right">0.0000713</td>
 <td align="right">0.2611901</td>
 <td align="right">0.2696230</td>
 <td align="right">0.0371875</td>
-<td align="right">0.0001807</td>
+<td align="right">5.70e-06</td>
 <td align="right">0.0367498</td>
 <td align="right">0.0374626</td>
 <td align="right">0.0001589</td>
@@ -475,11 +475,11 @@ rbind(result_high) %&gt;% kable()</code></pre>
 <tr class="even">
 <td align="left">result_intermediate</td>
 <td align="right">0.2623764</td>
-<td align="right">0.0043797</td>
+<td align="right">0.0001385</td>
 <td align="right">0.2547746</td>
 <td align="right">0.2722121</td>
 <td align="right">0.0372910</td>
-<td align="right">0.0003518</td>
+<td align="right">1.11e-05</td>
 <td align="right">0.0365601</td>
 <td align="right">0.0379582</td>
 <td align="right">0.0005813</td>
@@ -488,11 +488,11 @@ rbind(result_high) %&gt;% kable()</code></pre>
 <tr class="odd">
 <td align="left">result_high</td>
 <td align="right">0.2598525</td>
-<td align="right">0.0054634</td>
+<td align="right">0.0001728</td>
 <td align="right">0.2492964</td>
 <td align="right">0.2711125</td>
 <td align="right">0.0375032</td>
-<td align="right">0.0004389</td>
+<td align="right">1.39e-05</td>
 <td align="right">0.0366011</td>
 <td align="right">0.0383757</td>
 <td align="right">0.0009030</td>

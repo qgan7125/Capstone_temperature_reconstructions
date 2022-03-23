@@ -243,12 +243,12 @@ model &lt;- function(seed, statistic, dataSet, formula, replicate){
   
   CI_Intecept &lt;- boot.ci(results, type=&quot;bca&quot;, index=1)
   Intercept_names &lt;- c(&quot;Median Intercept&quot;, &quot;Intercept Std. Error&quot;, &quot;2.5%&quot;, &quot;92.5%&quot;)
-  Intercept_values &lt;- c(median(results$t[,1]), sd(results$t[,1]), CI_Intecept$bca[4], CI_Intecept$bca[5])
+  Intercept_values &lt;- c(median(results$t[,1]), sd(results$t[,1]) / sqrt(length(results$t[,1])), CI_Intecept$bca[4], CI_Intecept$bca[5])
   names(Intercept_values) &lt;- Intercept_names
   
   CI_Slope &lt;- boot.ci(results, type=&quot;bca&quot;, index=2)
   Slope_names &lt;- c(&quot;Median Slope&quot;, &quot;Slope Std. Error&quot;, &quot;2.5%&quot;, &quot;92.5%&quot;)
-  Slope_values &lt;- c(median(results$t[,2]), sd(results$t[,2]), CI_Slope$bca[4], CI_Slope$bca[5])
+  Slope_values &lt;- c(median(results$t[,2]), sd(results$t[,2]) / sqrt(length(results$t[,2])), CI_Slope$bca[4], CI_Slope$bca[5])
   names(Slope_values) &lt;- Slope_names
   
   MSE_names &lt;- c(&quot;Median Train MSE&quot;, &quot;Median Test MSE&quot;)
@@ -318,11 +318,11 @@ rbind(york_result_low) %&gt;% kable()</code></pre>
 <tr class="odd">
 <td align="left">york_result_low</td>
 <td align="right">0.2583409</td>
-<td align="right">0.0117553</td>
+<td align="right">0.0003717</td>
 <td align="right">0.2504001</td>
 <td align="right">0.301751</td>
 <td align="right">0.0376571</td>
-<td align="right">0.000762</td>
+<td align="right">2.41e-05</td>
 <td align="right">0.0349581</td>
 <td align="right">0.0382562</td>
 <td align="right">0.0001709</td>
@@ -379,11 +379,11 @@ rbind(york_result_intermediate) %&gt;% kable()</code></pre>
 <tr class="odd">
 <td align="left">york_result_intermediate</td>
 <td align="right">0.2545176</td>
-<td align="right">0.0269828</td>
+<td align="right">0.0008533</td>
 <td align="right">0.2357275</td>
 <td align="right">0.335303</td>
 <td align="right">0.0380324</td>
-<td align="right">0.0017234</td>
+<td align="right">5.45e-05</td>
 <td align="right">0.0326575</td>
 <td align="right">0.0391353</td>
 <td align="right">0.0006522</td>
@@ -440,11 +440,11 @@ rbind(york_result_high) %&gt;% kable()</code></pre>
 <tr class="odd">
 <td align="left">york_result_high</td>
 <td align="right">0.2396877</td>
-<td align="right">0.0239286</td>
+<td align="right">0.0007567</td>
 <td align="right">0.2271638</td>
 <td align="right">0.3371735</td>
 <td align="right">0.0390706</td>
-<td align="right">0.0015355</td>
+<td align="right">4.86e-05</td>
 <td align="right">0.0333651</td>
 <td align="right">0.0400675</td>
 <td align="right">0.0009677</td>
@@ -501,11 +501,11 @@ rbind(york_result_high) %&gt;% kable()</code></pre>
 <tr class="odd">
 <td align="left">york_result_low</td>
 <td align="right">0.2583409</td>
-<td align="right">0.0117553</td>
+<td align="right">0.0003717</td>
 <td align="right">0.2504001</td>
 <td align="right">0.3017510</td>
 <td align="right">0.0376571</td>
-<td align="right">0.0007620</td>
+<td align="right">2.41e-05</td>
 <td align="right">0.0349581</td>
 <td align="right">0.0382562</td>
 <td align="right">0.0001709</td>
@@ -514,11 +514,11 @@ rbind(york_result_high) %&gt;% kable()</code></pre>
 <tr class="even">
 <td align="left">york_result_intermediate</td>
 <td align="right">0.2545176</td>
-<td align="right">0.0269828</td>
+<td align="right">0.0008533</td>
 <td align="right">0.2357275</td>
 <td align="right">0.3353030</td>
 <td align="right">0.0380324</td>
-<td align="right">0.0017234</td>
+<td align="right">5.45e-05</td>
 <td align="right">0.0326575</td>
 <td align="right">0.0391353</td>
 <td align="right">0.0006522</td>
@@ -527,11 +527,11 @@ rbind(york_result_high) %&gt;% kable()</code></pre>
 <tr class="odd">
 <td align="left">york_result_high</td>
 <td align="right">0.2396877</td>
-<td align="right">0.0239286</td>
+<td align="right">0.0007567</td>
 <td align="right">0.2271638</td>
 <td align="right">0.3371735</td>
 <td align="right">0.0390706</td>
-<td align="right">0.0015355</td>
+<td align="right">4.86e-05</td>
 <td align="right">0.0333651</td>
 <td align="right">0.0400675</td>
 <td align="right">0.0009677</td>
@@ -581,11 +581,11 @@ rbind(deming_result_low) %&gt;% kable()</code></pre>
 <tr class="odd">
 <td align="left">deming_result_low</td>
 <td align="right">0.2583621</td>
-<td align="right">0.011756</td>
+<td align="right">0.0003718</td>
 <td align="right">0.2505189</td>
 <td align="right">0.3018056</td>
 <td align="right">0.0376548</td>
-<td align="right">0.0007619</td>
+<td align="right">2.41e-05</td>
 <td align="right">0.0349638</td>
 <td align="right">0.0382497</td>
 <td align="right">0.000171</td>
@@ -642,11 +642,11 @@ rbind(deming_result_intermediate) %&gt;% kable()</code></pre>
 <tr class="odd">
 <td align="left">deming_result_intermediate</td>
 <td align="right">0.2545605</td>
-<td align="right">0.0269912</td>
+<td align="right">0.0008535</td>
 <td align="right">0.2356724</td>
 <td align="right">0.3354301</td>
 <td align="right">0.0380295</td>
-<td align="right">0.001724</td>
+<td align="right">5.45e-05</td>
 <td align="right">0.0326564</td>
 <td align="right">0.0391415</td>
 <td align="right">0.0006518</td>
@@ -703,11 +703,11 @@ rbind(deming_result_high) %&gt;% kable()</code></pre>
 <tr class="odd">
 <td align="left">deming_result_high</td>
 <td align="right">0.2397284</td>
-<td align="right">0.0239412</td>
+<td align="right">0.0007571</td>
 <td align="right">0.2273222</td>
 <td align="right">0.3372984</td>
 <td align="right">0.0390686</td>
-<td align="right">0.0015366</td>
+<td align="right">4.86e-05</td>
 <td align="right">0.0333515</td>
 <td align="right">0.0400617</td>
 <td align="right">0.0009675</td>
@@ -764,11 +764,11 @@ rbind(deming_result_high) %&gt;% kable()</code></pre>
 <tr class="odd">
 <td align="left">deming_result_low</td>
 <td align="right">0.2583621</td>
-<td align="right">0.0117560</td>
+<td align="right">0.0003718</td>
 <td align="right">0.2505189</td>
 <td align="right">0.3018056</td>
 <td align="right">0.0376548</td>
-<td align="right">0.0007619</td>
+<td align="right">2.41e-05</td>
 <td align="right">0.0349638</td>
 <td align="right">0.0382497</td>
 <td align="right">0.0001710</td>
@@ -777,11 +777,11 @@ rbind(deming_result_high) %&gt;% kable()</code></pre>
 <tr class="even">
 <td align="left">deming_result_intermediate</td>
 <td align="right">0.2545605</td>
-<td align="right">0.0269912</td>
+<td align="right">0.0008535</td>
 <td align="right">0.2356724</td>
 <td align="right">0.3354301</td>
 <td align="right">0.0380295</td>
-<td align="right">0.0017240</td>
+<td align="right">5.45e-05</td>
 <td align="right">0.0326564</td>
 <td align="right">0.0391415</td>
 <td align="right">0.0006518</td>
@@ -790,11 +790,11 @@ rbind(deming_result_high) %&gt;% kable()</code></pre>
 <tr class="odd">
 <td align="left">deming_result_high</td>
 <td align="right">0.2397284</td>
-<td align="right">0.0239412</td>
+<td align="right">0.0007571</td>
 <td align="right">0.2273222</td>
 <td align="right">0.3372984</td>
 <td align="right">0.0390686</td>
-<td align="right">0.0015366</td>
+<td align="right">4.86e-05</td>
 <td align="right">0.0333515</td>
 <td align="right">0.0400617</td>
 <td align="right">0.0009675</td>

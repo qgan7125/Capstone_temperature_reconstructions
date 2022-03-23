@@ -71,12 +71,12 @@ model <- function(seed, statistic, dataSet, formula, replicate){
   
   CI_Intecept <- boot.ci(results, type="bca", index=1)
   Intercept_names <- c("Median Intercept", "Intercept Std. Error", "2.5%", "92.5%")
-  Intercept_values <- c(median(results$t[,1]), sd(results$t[,1]), CI_Intecept$bca[4], CI_Intecept$bca[5])
+  Intercept_values <- c(median(results$t[,1]), sd(results$t[,1]) / sqrt(length(results$t[,1])), CI_Intecept$bca[4], CI_Intecept$bca[5])
   names(Intercept_values) <- Intercept_names
   
   CI_Slope <- boot.ci(results, type="bca", index=2)
   Slope_names <- c("Median Slope", "Slope Std. Error", "2.5%", "92.5%")
-  Slope_values <- c(median(results$t[,2]), sd(results$t[,2]), CI_Slope$bca[4], CI_Slope$bca[5])
+  Slope_values <- c(median(results$t[,2]), sd(results$t[,2]) / sqrt(length(results$t[,2])), CI_Slope$bca[4], CI_Slope$bca[5])
   names(Slope_values) <- Slope_names
   
   MSE_names <- c("Median Train MSE", "Median Test MSE")

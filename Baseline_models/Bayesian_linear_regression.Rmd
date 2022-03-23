@@ -30,18 +30,48 @@ data_high <- read_csv("../Data/Dataset_S3_Mar8.csv")
 Using the Bayesian linear regression without error
 The model setup is is stan/Bayesian_linear_model.stan
 
+```{R}
+model_without_error <- function(data, iter, chains, seed){
+  rstan_options(auto_write = TRUE)
+  stan_date <- list(N = nrow(data), Temperature = data$Temperature, D47 = data$D47)
+  model <- stan(file = "stan/Bayesian_linear_model.stan", data = stan_date, iter = iter, chains = chains, seed = seed)
+  
+  result <- rstan::extract(model)
+  Intercept_names <- c("Median Intercept", "Intercept Std. Error", "2.5%", "92.5%")
+  Intercept_values <- c(summary(result$alpha)[3], summary(model)$summary[1, 2], summary(result$alpha)[2],summary(result$alpha)[5])
+  names(Intercept_values) <- Intercept_names
+  
+  Slope_names <- c("Median Slope", "Slope Std. Error", "2.5%", "92.5%")
+  Slope_values <- c(summary(result$beta)[3], summary(model)$summary[2, 2], summary(result$beta)[2],summary(result$beta)[5])
+  names(Slope_values) <- Slope_names
+  
+  return(c(Intercept_values, Slope_values))
+}
+
+# create data visualization
+createPlot <- function(data, result, title, caption) {
+  data %>% 
+    ggplot(aes(x = x_TRUE, y=y_TRUE)) + 
+    geom_ribbon(aes(ymin = result[7] * x_TRUE + result[4] , ymax = result[8] * x_TRUE + result[3]), fill = "orange") +
+    geom_point() +
+    geom_abline(slope = 0.0369, intercept = 0.268, color = 'red') +
+    geom_abline(slope = result[5], intercept = result[1], color = 'yellow') + 
+    labs(title = title,
+         caption = caption) + 
+    xlab("True Temperature") + 
+    ylab("True D47")
+}
+
+```
+
+
 ### Data with low error
 ```{r}
-stan_data_low <- list(N = nrow(data_low), Temperature = data_low$Temperature, D47 = data_low$D47)
-
-rstan_options(auto_write = TRUE)
-model_low <- stan(file = "stan/Bayesian_linear_model.stan", data = stan_data_low, iter = 1000, chains = 4, seed = 1234)
-
-results_low <- rstan::extract(model_low)
-cat("Median Intercept", median(results_low$alpha))
-cat("Median Slope", median(results_low$beta))
-summary(model_low)$summary
+results_low <- model_without_error(data_low, 1000, 4, 1234) 
+rbind(results_low) %>% kable()
 ```
+
+
 
 #### Comparing result to the true parameters
 Plot confident interval area of the median slope/intercept of bootstrapping results
@@ -49,28 +79,16 @@ And comparing it to the true slope/intercept
 
 I use the true data points to plot.
 ```{r}
-data_low %>% 
-  ggplot(aes(x = x_TRUE, y=y_TRUE)) + 
-  geom_ribbon(aes(ymin = summary(model_low)$summary[2,4] * x_TRUE + summary(model_low)$summary[1,8] , ymax = summary(model_low)$summary[2,8] * x_TRUE + summary(model_low)$summary[1,4]), fill = "orange") +
-  geom_point() +
-  geom_abline(slope = 0.0369, intercept = 0.268, color = 'red') +
-  geom_abline(slope = median(results_low$beta), intercept = median(results_low$alpha), color = 'yellow') + 
-  labs(title = "Bayesian model with low error data") + 
-  xlab("True Temperature") + 
-  ylab("True D47")
+createPlot(data_low, 
+           results_low, 
+           "Bayesian model with no error in model and the low error data", 
+           "Bayesian model with no error in model and the low error data. Red line as true coefficient. Yellow is Bayesian fitted coefficient")
 ```
 
 ### Data with intermediate error
 ```{r}
-stan_data_intermediate <- list(N = nrow(data_intermediate), Temperature = data_intermediate$Temperature, D47 = data_intermediate$D47)
-
-rstan_options(auto_write = TRUE)
-model_intermediate <- stan(file = "stan/Bayesian_linear_model.stan", data = stan_data_intermediate, iter = 1000, chains = 4, seed = 1234)
-
-results_intermediate <- rstan::extract(model_intermediate)
-cat("Median Intercept", median(results_intermediate$alpha))
-cat("Median Slope", median(results_intermediate$beta))
-summary(model_intermediate)$summary
+results_intermediate <- model_without_error(data_intermediate, 1000, 4, 1234) 
+rbind(results_intermediate) %>% kable()
 ```
 
 #### Comparing result to the true parameters
@@ -79,28 +97,16 @@ And comparing it to the true slope/intercept
 
 I use the true data points to plot.
 ```{r}
-data_intermediate %>% 
-  ggplot(aes(x = x_TRUE, y=y_TRUE)) + 
-  geom_ribbon(aes(ymin = summary(model_intermediate)$summary[2,4] * x_TRUE + summary(model_intermediate)$summary[1,8] , ymax = summary(model_intermediate)$summary[2,8] * x_TRUE + summary(model_intermediate)$summary[1,4]), fill = "orange") +
-  geom_point() +
-  geom_abline(slope = 0.0369, intercept = 0.268, color = 'red') +
-  geom_abline(slope = median(results_intermediate$beta), intercept = median(results_intermediate$alpha), color = 'yellow') +
-  labs(title = "Bayesian model with the intermediate error data") + 
-  xlab("True Temperature") + 
-  ylab("True D47")
+createPlot(data_intermediate, 
+           results_intermediate, 
+           "Bayesian model with no error in model and the intermediate error data", 
+           "Bayesian model with no error in model and the intermediate error data. Red line as true coefficient. Yellow is Bayesian fitted coefficient")
 ```
 
 ### Data with high error
 ```{r}
-stan_data_high <- list(N = nrow(data_high), Temperature = data_high$Temperature, D47 = data_high$D47)
-
-rstan_options(auto_write = TRUE)
-model_high <- stan(file = "stan/Bayesian_linear_model.stan", data = stan_data_high, iter = 1000, chains = 4, seed = 1234)
-
-results_high <- rstan::extract(model_high)
-cat("Median Intercept", median(results_high$alpha))
-cat("Median Slope", median(results_high$beta))
-summary(model_high)$summary
+results_high <- model_without_error(data_high, 1000, 4, 1234) 
+rbind(results_high) %>% kable()
 ```
 
 #### Comparing result to the true parameters
@@ -109,30 +115,15 @@ And comparing it to the true slope/intercept
 
 I use the true data points to plot.
 ```{r}
-data_high %>% 
-  ggplot(aes(x = x_TRUE, y=y_TRUE)) + 
-  geom_ribbon(aes(ymin = summary(model_high)$summary[2,4] * x_TRUE + summary(model_high)$summary[1,8] , ymax = summary(model_high)$summary[2,8] * x_TRUE + summary(model_high)$summary[1,4]), fill = "orange") +
-  geom_point() +
-  geom_abline(slope = 0.0369, intercept = 0.268, color = 'red') +
-  geom_abline(slope = median(results_high$beta), intercept = median(results_high$alpha), color = 'yellow') +
-  labs(title = "Bayesian model with the high error data") + 
-  xlab("True Temperature") + 
-  ylab("True D47")
+createPlot(data_high, 
+           results_high, 
+           "Bayesian model with no error in model and the high error data", 
+           "Bayesian model with no error in model and the high error data. Red line as true coefficient. Yellow is Bayesian fitted coefficient")
 ```
 
 ## Bayesian linear regression Results summary
 ```{r}
-medianIntercept <- c(median(results_low$alpha), median(results_intermediate$alpha), median(results_high$alpha))
-se_mean_Intercept <- c(summary(model_low)$summary[1,2], summary(model_intermediate)$summary[1,2], summary(model_high)$summary[1,2])
-medianSlope <- c(median(results_low$beta), median(results_intermediate$beta), median(results_high$beta))
-se_mean_Slope <- c(summary(model_low)$summary[2,2], summary(model_intermediate)$summary[2,2], summary(model_high)$summary[2,2])
-
-mat <- array(c(medianIntercept, se_mean_Intercept, medianSlope, se_mean_Slope), dim = c(3, 4))
-colnames(mat) <- c("median_Intercept", "se_mean_Intercept", "median_Slope", "se_mean_slope")
-rownames(mat) <- c("Low Error", "Intermediate Error", "High Error")
-
-mat %>% 
-  kable()
+rbind(results_low, results_intermediate, results_high) %>% kable()
 ```
 
 ## Bayesian Linear Regression with Errors
@@ -140,23 +131,35 @@ mat %>%
 Using the Bayesian linear regression with error
 The model setup is is stan/Bayesian_linear_model_with_error.stan
 
+```{r}
+model_with_error <- function(data, iter, chains, seed){
+  rstan_options(auto_write = TRUE)
+  stan_date <- list(N = nrow(data), 
+                      Temperature = data$Temperature, 
+                      Temperature_true = data$x_TRUE,
+                      Temperature_error = abs(data$TempError),
+                      D47 = data$D47,
+                      D47_true = data$y_TRUE,
+                      D47_error = abs(data$D47error))
+  model <- stan(file = "stan/Bayesian_linear_model_with_error.stan", data = stan_date, iter = iter, chains = chains, seed = seed)
+  
+  result <- rstan::extract(model)
+  Intercept_names <- c("Median Intercept", "Intercept Std. Error", "2.5%", "92.5%")
+  Intercept_values <- c(summary(result$alpha)[3], summary(model)$summary[1, 2], summary(result$alpha)[2],summary(result$alpha)[5])
+  names(Intercept_values) <- Intercept_names
+  
+  Slope_names <- c("Median Slope", "Slope Std. Error", "2.5%", "92.5%")
+  Slope_values <- c(summary(result$beta)[3], summary(model)$summary[2, 2], summary(result$beta)[2],summary(result$beta)[5])
+  names(Slope_values) <- Slope_names
+  
+  return(c(Intercept_values, Slope_values))
+}
+```
+
 ### Data with low error
 ```{r}
-stan_data_low <- list(N = nrow(data_low), 
-                      Temperature = data_low$Temperature, 
-                      Temperature_true = data_low$x_TRUE,
-                      Temperature_error = abs(data_low$TempError),
-                      D47 = data_low$D47,
-                      D47_true = data_low$y_TRUE,
-                      D47_error = abs(data_low$D47error))
-
-
-rstan_options(auto_write = TRUE)
-model_low <- stan(file = "stan/Bayesian_linear_model_with_error.stan", data = stan_data_low, iter = 1000, chains = 4, seed = 1234)
-
-cat("Median Intercept", summary(model_low)$summary[1,6])
-cat("Median Slope", summary(model_low)$summary[2,6])
-summary(model_low)$summary
+results_low <- model_with_error(data_low, 1000, 4, 1234) 
+rbind(results_low) %>% kable()
 
 ```
 
@@ -166,36 +169,17 @@ And comparing it to the true slope/intercept
 
 I use the true data points to plot.
 ```{r}
-data_low %>% 
-  ggplot(aes(x = x_TRUE, y=y_TRUE)) + 
-  geom_ribbon(aes(ymin = summary(model_low)$summary[2,4] * x_TRUE + summary(model_low)$summary[1,8] , ymax = summary(model_low)$summary[2,8] * x_TRUE + summary(model_low)$summary[1,4]), fill = "orange") +
-  geom_point() +
-  geom_abline(slope = 0.0369, intercept = 0.268, color = 'red') +
-  geom_abline(slope = summary(model_low)$summary[2,6], intercept = summary(model_low)$summary[1,6], color = 'yellow') + 
-  labs(title = "Bayesian model with parameters' errors and low error data") + 
-  xlab("True Temperature") + 
-  ylab("True D47")
+createPlot(data_low, 
+           results_low, 
+           "Bayesian model with error in model and the low error data", 
+           "Bayesian model with error in model and the low error data. Red line as true coefficient. Yellow is Bayesian fitted coefficient")
 ```
 
 
 ### Data with Intermediate error
 ```{r}
-stan_data_intermediate <- list(N = nrow(data_intermediate), 
-                      Temperature = data_intermediate$Temperature, 
-                      Temperature_true = data_intermediate$x_TRUE,
-                      Temperature_error = abs(data_intermediate$TempError),
-                      D47 = data_intermediate$D47,
-                      D47_true = data_intermediate$y_TRUE,
-                      D47_error = abs(data_intermediate$D47error))
-
-
-rstan_options(auto_write = TRUE)
-model_intermediate <- stan(file = "stan/Bayesian_linear_model_with_error.stan", data = stan_data_intermediate, iter = 1000, chains = 4, seed = 1234)
-
-cat("Median Intercept", summary(model_intermediate)$summary[1,6])
-cat("Median Slope", summary(model_intermediate)$summary[2,6])
-summary(model_intermediate)$summary
-
+results_intermediate <- model_with_error(data_intermediate, 1000, 4, 1234) 
+rbind(results_intermediate) %>% kable()
 ```
 
 #### Comparing result to the true parameters
@@ -204,33 +188,16 @@ And comparing it to the true slope/intercept
 
 I use the true data points to plot.
 ```{r}
-data_intermediate %>% 
-  ggplot(aes(x = x_TRUE, y=y_TRUE)) + 
-  geom_ribbon(aes(ymin = summary(model_intermediate)$summary[2,4] * x_TRUE + summary(model_intermediate)$summary[1,8] , ymax = summary(model_intermediate)$summary[2,8] * x_TRUE + summary(model_intermediate)$summary[1,4]), fill = "orange") +
-  geom_point() +
-  geom_abline(slope = 0.0369, intercept = 0.268, color = 'red') +
-  geom_abline(slope = summary(model_intermediate)$summary[2,6], intercept = summary(model_intermediate)$summary[1,6], color = 'yellow') + 
-  labs(title = "Bayesian model with parameters' errors and intermediate error data") + 
-  xlab("True Temperature") + 
-  ylab("True D47")
+createPlot(data_intermediate, 
+           results_intermediate, 
+           "Bayesian model with error in model and the intermediate error data", 
+           "Bayesian model with error in model and the intermediate error data. Red line as true coefficient. Yellow is Bayesian fitted coefficient")
 ```
+
 ### Data with High error
 ```{r}
-stan_data_high <- list(N = nrow(data_high), 
-                      Temperature = data_high$Temperature, 
-                      Temperature_true = data_high$x_TRUE,
-                      Temperature_error = abs(data_high$TempError),
-                      D47 = data_high$D47,
-                      D47_true = data_high$y_TRUE,
-                      D47_error = abs(data_high$D47error))
-
-
-rstan_options(auto_write = TRUE)
-model_high <- stan(file = "stan/Bayesian_linear_model_with_error.stan", data = stan_data_high, iter = 1000, chains = 4, seed = 1234)
-
-cat("Median Intercept", summary(model_high)$summary[1,6])
-cat("Median Slope", summary(model_high)$summary[2,6])
-summary(model_high)$summary
+results_high <- model_with_error(data_high, 1000, 4, 1234) 
+rbind(results_high) %>% kable()
 
 ```
 
@@ -240,14 +207,14 @@ And comparing it to the true slope/intercept
 
 I use the true data points to plot.
 ```{r}
-data_high %>% 
-  ggplot(aes(x = x_TRUE, y=y_TRUE)) + 
-  geom_ribbon(aes(ymin = summary(model_high)$summary[2,4] * x_TRUE + summary(model_high)$summary[1,8] , ymax = summary(model_high)$summary[2,8] * x_TRUE + summary(model_high)$summary[1,4]), fill = "orange") +
-  geom_point() +
-  geom_abline(slope = 0.0369, intercept = 0.268, color = 'red') +
-  geom_abline(slope = summary(model_high)$summary[2,6], intercept = summary(model_high)$summary[1,6], color = 'yellow') + 
-  labs(title = "Bayesian model with parameters' errors and high error data") + 
-  xlab("True Temperature") + 
-  ylab("True D47")
+createPlot(data_high, 
+           results_high, 
+           "Bayesian model with error in model and the high error data", 
+           "Bayesian model with error in model and the high error data. Red line as true coefficient. Yellow is Bayesian fitted coefficient")
+```
+
+## Bayesian linear regression Results summary
+```{r}
+rbind(results_low, results_intermediate, results_high) %>% kable()
 ```
 
