@@ -50,16 +50,18 @@ model_without_error <- function(data, iter, chains, seed){
 
 # create data visualization
 createPlot <- function(data, result, title, caption) {
-  data %>% 
+  plot_object <- data %>% 
     ggplot(aes(x = x_TRUE, y=y_TRUE)) + 
     geom_ribbon(aes(ymin = result[7] * x_TRUE + result[4] , ymax = result[8] * x_TRUE + result[3]), fill = "orange") +
     geom_point() +
     geom_abline(slope = 0.0369, intercept = 0.268, color = 'red') +
     geom_abline(slope = result[5], intercept = result[1], color = 'yellow') + 
     labs(title = title,
-         caption = caption) + 
-    xlab("True Temperature") + 
-    ylab("True D47")
+         caption = paste(caption, "\n", greeks("beta"), "=",round(result[1], 4), "(95% CI", round(result[3], 4),"-", round(result[4],4), ")\n"
+         , greeks("alpha"), "=",round(result[5], 4), "(95% CI", round(result[7], 4),"-", round(result[8],4), ")" ))+ 
+    xlab(expression(paste("True Temperature in ", ""^"o", "K"))) + 
+    ylab(expression(paste("True D47 (", ""^"o", "/"["oo"], ")"))) 
+  return(plot_object)
 }
 
 ```

@@ -15,6 +15,8 @@ library(dplyr)
 library(ggplot2)
 library(boot)
 library(knitr)
+library(greekLetters)
+library(patchwork)
 ```
 
 ## load data in
@@ -74,16 +76,18 @@ OLS <- function(seed, statistic, dataSet, formula, replicate){
 
 # create data visualization
 createPlot <- function(data, result, title, caption) {
-  data %>% 
+  plot_object <- data %>% 
     ggplot(aes(x = x_TRUE, y=y_TRUE)) + 
     geom_ribbon(aes(ymin = result[7] * x_TRUE + result[4] , ymax = result[8] * x_TRUE + result[3]), fill = "orange") +
     geom_point() +
     geom_abline(slope = 0.0369, intercept = 0.268, color = 'red') +
     geom_abline(slope = result[5], intercept = result[1], color = 'yellow') + 
     labs(title = title,
-         caption = caption) + 
-    xlab("True Temperature") + 
-    ylab("True D47")
+         caption = paste(caption, "\n", greeks("beta"), "=",round(result[1], 4), "(95% CI", round(result[3], 4),"-", round(result[4],4), ")\n"
+         , greeks("alpha"), "=",round(result[5], 4), "(95% CI", round(result[7], 4),"-", round(result[8],4), ")" ))+ 
+    xlab(expression(paste("True Temperature in ", ""^"o", "K"))) + 
+    ylab(expression(paste("True D47 (", ""^"o", "/"["oo"], ")"))) 
+  return(plot_object)
 }
 
 ```
@@ -103,10 +107,12 @@ And comparing it to the true slope/intercept
 
 I use the true data points to plot.
 ```{r}
-createPlot(data_low, 
+plot_low <- createPlot(data_low, 
            result_low, 
            "OLS model with the low error data", 
-           "OLS model with the low error data. Red line as true coefficient. Yellow is OLS fitted coefficient")
+           "OLS model with the low error data. Red line as true coefficient. Yellow is OLS fitted coefficient" )
+
+plot_low
 ```
 
 ## Intermediate error bootstrapping results
@@ -124,10 +130,12 @@ And comparing it to the true slope/intercept
 
 I use the true data points to plot.
 ```{r}
-createPlot(data_intermediate, 
+plot_intermediate <- createPlot(data_intermediate, 
            result_intermediate, 
            "OLS model with the intermediate error data", 
            "OLS model with the intermediate error data. Red line as true coefficient. Yellow is OLS fitted coefficient")
+
+plot_intermediate
 ```
 
 ## High error bootstrapping results
@@ -145,10 +153,12 @@ And comparing it to the true slope/intercept
 
 I use the true data points to plot.
 ```{r}
-createPlot(data_high, 
+plot_high <- createPlot(data_high, 
            result_high, 
            "OLS model with the high error data", 
            "OLS model with the high error data. Red line as true coefficient. Yellow is OLS fitted coefficient")
+
+plot_high
 ```
 
 
