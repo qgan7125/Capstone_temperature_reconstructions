@@ -15,6 +15,7 @@ library(knitr)
 library(ggplot2)
 library(pracma)
 library(boot)
+library(greekLetters)
 ```
 
 ## Load data in

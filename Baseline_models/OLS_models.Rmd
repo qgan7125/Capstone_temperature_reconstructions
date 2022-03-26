@@ -16,7 +16,6 @@ library(ggplot2)
 library(boot)
 library(knitr)
 library(greekLetters)
-library(patchwork)
 ```
 
 ## load data in

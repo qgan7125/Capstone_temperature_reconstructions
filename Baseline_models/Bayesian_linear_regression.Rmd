@@ -13,6 +13,7 @@ library(rstan)
 library(tidyverse)
 library(knitr)
 library(ggplot2)
+library(greekLetters)
 options(mc.cores = parallel::detectCores())
 
 ```
@@ -33,10 +34,19 @@ The model setup is is stan/Bayesian_linear_model.stan
 ```{R}
 model_without_error <- function(data, iter, chains, seed){
   rstan_options(auto_write = TRUE)
-  stan_date <- list(N = nrow(data), Temperature = data$Temperature, D47 = data$D47)
-  model <- stan(file = "stan/Bayesian_linear_model.stan", data = stan_date, iter = iter, chains = chains, seed = seed)
+  mark <- sample(                                     # Mark for train-test
+    c(rep(0, 0.7*nrow(data)), 
+    c(rep(1, 0.3*nrow(data)))))      
+  train <- data[mark == 0,]                              # train data
+  test <- data[mark == 1,]                               # test data
   
+  stan_date <- list(N = nrow(train), Temperature = train$Temperature, D47 = train$D47)
+  model <- stan(file = "stan/Bayesian_linear_model.stan", data = stan_date, iter = iter, chains = chains, seed = seed)
   result <- rstan::extract(model)
+  
+  train_MSE <- mean((train$D47 - (train$Temperature * summary(result$beta)[3] + summary(result$alpha)[3]))^2)    # Train set MSE
+  test_MSE <- mean((test$D47 - (test$Temperature * summary(result$beta)[3] + summary(result$alpha)[3]))^2)# Test set MSE
+
   Intercept_names <- c("Median Intercept", "Intercept Std. Error", "2.5%", "92.5%")
   Intercept_values <- c(summary(result$alpha)[3], summary(model)$summary[1, 2], summary(result$alpha)[2],summary(result$alpha)[5])
   names(Intercept_values) <- Intercept_names
@@ -45,7 +55,11 @@ model_without_error <- function(data, iter, chains, seed){
   Slope_values <- c(summary(result$beta)[3], summary(model)$summary[2, 2], summary(result$beta)[2],summary(result$beta)[5])
   names(Slope_values) <- Slope_names
   
-  return(c(Intercept_values, Slope_values))
+  MSE_names <- c("Median Train MSE", "Median Test MSE")
+  MSE_values <- c(train_MSE, test_MSE)
+  names(MSE_values) <- MSE_names
+  
+  return(c(Intercept_values, Slope_values, MSE_values))
 }
 
 # create data visualization
@@ -136,16 +150,27 @@ The model setup is is stan/Bayesian_linear_model_with_error.stan
 ```{r}
 model_with_error <- function(data, iter, chains, seed){
   rstan_options(auto_write = TRUE)
-  stan_date <- list(N = nrow(data), 
-                      Temperature = data$Temperature, 
-                      Temperature_true = data$x_TRUE,
-                      Temperature_error = abs(data$TempError),
-                      D47 = data$D47,
-                      D47_true = data$y_TRUE,
-                      D47_error = abs(data$D47error))
+  
+  mark <- sample(                                     # Mark for train-test
+    c(rep(0, 0.7*nrow(data)), 
+    c(rep(1, 0.3*nrow(data)))))      
+  train <- data[mark == 0,]                              # train data
+  test <- data[mark == 1,]                               # test data
+  stan_date <- list(N = nrow(train), 
+                      Temperature = train$Temperature, 
+                      Temperature_true = train$x_TRUE,
+                      Temperature_error = abs(train$TempError),
+                      D47 = train$D47,
+                      D47_true = train$y_TRUE,
+                      D47_error = abs(train$D47error))
+  
   model <- stan(file = "stan/Bayesian_linear_model_with_error.stan", data = stan_date, iter = iter, chains = chains, seed = seed)
   
   result <- rstan::extract(model)
+  
+  train_MSE <- mean((train$D47 - (train$Temperature * summary(result$beta)[3] + summary(result$alpha)[3]))^2)    # Train set MSE
+  test_MSE <- mean((test$D47 - (test$Temperature * summary(result$beta)[3] + summary(result$alpha)[3]))^2)# Test set MSE
+  
   Intercept_names <- c("Median Intercept", "Intercept Std. Error", "2.5%", "92.5%")
   Intercept_values <- c(summary(result$alpha)[3], summary(model)$summary[1, 2], summary(result$alpha)[2],summary(result$alpha)[5])
   names(Intercept_values) <- Intercept_names
@@ -154,7 +179,11 @@ model_with_error <- function(data, iter, chains, seed){
   Slope_values <- c(summary(result$beta)[3], summary(model)$summary[2, 2], summary(result$beta)[2],summary(result$beta)[5])
   names(Slope_values) <- Slope_names
   
-  return(c(Intercept_values, Slope_values))
+  MSE_names <- c("Median Train MSE", "Median Test MSE")
+  MSE_values <- c(train_MSE, test_MSE)
+  names(MSE_values) <- MSE_names
+  
+  return(c(Intercept_values, Slope_values, MSE_values))
 }
 ```
 

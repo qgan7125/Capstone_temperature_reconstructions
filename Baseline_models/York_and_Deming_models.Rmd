@@ -17,7 +17,6 @@ library(IsoplotR)
 library(boot)
 library(deming)
 library(greekLetters)
-library(patchwork)
 ```
 
 ## Load data in
