@@ -83,8 +83,8 @@ createPlot <- function(data, result, title, caption) {
     geom_abline(slope = 0.0369, intercept = 0.268, color = 'red') +
     geom_abline(slope = result[5], intercept = result[1], color = 'yellow') + 
     labs(title = title,
-         caption = paste(caption, "\n", greeks("beta"), "=",round(result[1], 4), "(95% CI", round(result[3], 4),"-", round(result[4],4), ")\n"
-         , greeks("alpha"), "=",round(result[5], 4), "(95% CI", round(result[7], 4),"-", round(result[8],4), ")" ))+ 
+         caption = paste(caption, "\n", greeks("alpha"), "=",round(result[1], 4), "(95% CI", round(result[3], 4),"-", round(result[4],4), ")\n"
+         , greeks("beta"), "=",round(result[5], 4), "(95% CI", round(result[7], 4),"-", round(result[8],4), ")" ))+ 
     xlab(expression(paste("True Temperature in ", ""^"o", "K"))) + 
     ylab(expression(paste("True D47 (", ""^"o", "/"["oo"], ")"))) 
   return(plot_object)
@@ -92,12 +92,14 @@ createPlot <- function(data, result, title, caption) {
 
 ```
 
+
 ## Data Low Error
 ```{r}
 result_low <- ODR(1234, ODR_boot, data_low, 1000)
 
 rbind(result_low) %>% kable()
 ```
+
 #### Comparing result to the true parameters
 Plot confident interval area of the median slope/intercept of bootstrapping results
 And comparing it to the true slope/intercept
@@ -111,12 +113,14 @@ createPlot(data_low,
 
 ```
 
+
 ## Data Intermediate Error
 ```{r}
 result_intermediate <- ODR(1234, ODR_boot, data_intermediate, 1000)
 
 rbind(result_intermediate) %>% kable()
 ```
+
 #### Comparing result to the true parameters
 Plot confident interval area of the median slope/intercept of bootstrapping results
 And comparing it to the true slope/intercept
@@ -128,6 +132,7 @@ createPlot(data_intermediate,
            "ODR model with the intermediate error data", 
            "ODR model with the intermediate error data. Red line as true coefficient. Yellow is ODR fitted coefficient")
 ```
+
 ## Data High Error
 ```{r}
 result_high <- ODR(1234, ODR_boot, data_high, 1000)
@@ -145,6 +150,7 @@ createPlot(data_high,
            "ODR model with the high error data", 
            "ODR model with the high error data. Red line as true coefficient. Yellow is ODR fitted coefficient")
 ```
+
 ## Median slopes/intercepts VS true parameters
 
 Mean slope/Intercept VS Median slope/Intercept

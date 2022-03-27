@@ -105,13 +105,14 @@ createPlot <- function(data, result, title, caption) {
     geom_abline(slope = 0.0369, intercept = 0.268, color = 'red') +
     geom_abline(slope = result[5], intercept = result[1], color = 'yellow') + 
     labs(title = title,
-         caption = paste(caption, "\n", greeks("beta"), "=",round(result[1], 4), "(95% CI", round(result[3], 4),"-", round(result[4],4), ")\n"
-         , greeks("alpha"), "=",round(result[5], 4), "(95% CI", round(result[7], 4),"-", round(result[8],4), ")" ))+ 
+         caption = paste(caption, "\n", greeks("alpha"), "=",round(result[1], 4), "(95% CI", round(result[3], 4),"-", round(result[4],4), ")\n"
+         , greeks("beta"), "=",round(result[5], 4), "(95% CI", round(result[7], 4),"-", round(result[8],4), ")" ))+ 
     xlab(expression(paste("True Temperature in ", ""^"o", "K"))) + 
     ylab(expression(paste("True D47 (", ""^"o", "/"["oo"], ")"))) 
   return(plot_object)
 }
 ```
+
 
 ## Low error data
 ```{r}
@@ -132,6 +133,7 @@ createPlot(data_low,
            "LSMC model with the low error data. Red line as true coefficient. Yellow is LSMC fitted coefficient")
 ```
 
+## intermediate error data
 
 ```{r}
 result_intermediate <- MonteCarlo(1234, 1000, 1000, data_intermediate)
@@ -151,6 +153,7 @@ createPlot(data_intermediate,
            "LSMC model with the intermediate error data. Red line as true coefficient. Yellow is LSMC fitted coefficient")
 ```
 
+## high error data
 ```{r}
 result_high <- MonteCarlo(1234, 1000, 1000, data_high )
 
@@ -168,6 +171,8 @@ createPlot(data_high,
            "LSMC model with the high error data", 
            "LSMC model with the high error data. Red line as true coefficient. Yellow is LSMC fitted coefficient")
 ```
+
+
 ## Median slopes/intercepts VS true parameters
 
 Mean slope/Intercept VS Median slope/Intercept
