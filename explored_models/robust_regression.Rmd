@@ -1,0 +1,171 @@
+---
+title: "RLM Model"
+author: "Quan Gan"
+date: "2/9/2022"
+output: 
+  html_document:
+    toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+library(tidyverse)
+library(ggplot2)
+library(boot)
+library(knitr)
+library(greekLetters)
+library(MASS)
+library(boot)
+```
+
+
+## load data in
+There are three data sets with low, intermediate, and high errors.
+```{r}
+data_low <- read_csv("../Data/Dataset_S1_Mar8.csv")
+data_intermediate <- read_csv("../Data/Dataset_S2_Mar8.csv")
+data_high <- read_csv("../Data/Dataset_S3_Mar8.csv")
+```
+
+## The helper functions for bootstrapping 1000 replicates with robust regression models and data visulization.
+```{r}
+# https://www.statmethods.net/advstats/bootstrapping.html
+# Boot library docs
+# calculate the coefficient
+RLM_boot <- function(formula, data, indices) {
+  d <- data[indices,]                                 # allows boot to select sample
+  mark <- sample(                                     # Mark for train-test
+    c(rep(0, 0.7*nrow(d)), 
+    c(rep(1, 0.3*nrow(d)))))      
+  train <- d[mark == 0,]                              # train data
+  test <- d[mark == 1,]                               # test data
+  fit <- rlm(formula, data=train)                      # the OLS model
+  train_MSE <- mean((train$D47 - predict(fit))^2)     # Train set MSE
+  test_MSE <- mean((test$D47 - predict(fit, newdata = test))^2)# Test set MSE
+  return(c(coef(fit), train_MSE, test_MSE))                    # get intercept
+}
+
+# The OLS function with bootstrapping
+RLM <- function(seed, statistic, dataSet, formula, replicate){
+  set.seed(seed)
+  results <- boot(data = dataSet,
+                  statistic = statistic,
+                  R = replicate,
+                  formula = formula)
+  
+  CI_Intecept <- boot.ci(results, type="bca", index=1)
+  Intercept_names <- c("Median Intercept", "Intercept Std. Error", "2.5%", "92.5%")
+  Intercept_values <- c(median(results$t[,1]), sd(results$t[,1]) / sqrt(length(results$t[,1])), CI_Intecept$bca[4], CI_Intecept$bca[5])
+  names(Intercept_values) <- Intercept_names
+  
+  CI_Slope <- boot.ci(results, type="bca", index=2)
+  Slope_names <- c("Median Slope", "Slope Std. Error", "2.5%", "92.5%")
+  Slope_values <- c(median(results$t[,2]), sd(results$t[,2]) / sqrt(length(results$t[,2])), CI_Slope$bca[4], CI_Slope$bca[5])
+  names(Slope_values) <- Slope_names
+  
+  MSE_names <- c("Median Train MSE", "Median Test MSE")
+  MSE_values <- c(median(results$t[,3]), median(results$t[,4]))
+  names(MSE_values) <- MSE_names
+  
+  
+  Intercept_values %>% kable()
+  Slope_values %>% kable()
+  MSE_values %>% kable()
+  
+  return (c(Intercept_values, Slope_values, MSE_values))
+}
+
+# create data visualization
+createPlot <- function(data, result, title, caption) {
+  plot_object <- data %>% 
+    ggplot(aes(x = x_TRUE, y=y_TRUE)) + 
+    geom_ribbon(aes(ymin = result[7] * x_TRUE + result[4] , ymax = result[8] * x_TRUE + result[3]), fill = "orange") +
+    geom_point() +
+    geom_abline(slope = 0.0369, intercept = 0.268, color = 'red') +
+    geom_abline(slope = result[5], intercept = result[1], color = 'yellow') + 
+    labs(title = title,
+         caption = paste(caption, "\n", greeks("alpha"), "=",round(result[1], 4), "(95% CI", round(result[3], 4),"-", round(result[4],4), ")\n"
+         , greeks("beta"), "=",round(result[5], 4), "(95% CI", round(result[7], 4),"-", round(result[8],4), ")" ))+ 
+    xlab(expression(paste("True Temperature in ", ""^"o", "K"))) + 
+    ylab(expression(paste("True D47 (", ""^"o", "/"["oo"], ")"))) 
+  return(plot_object)
+}
+
+```
+
+
+## Low error bootstrapping results
+
+```{r}
+result_low <- RLM(1234, RLM_boot, data_low, D47~Temperature, 1000)
+
+rbind(result_low) %>% kable()
+```
+
+### Comparing result to the true parameters
+Plot confident interval area of the median slope/intercept of bootstrapping results
+And comparing it to the true slope/intercept
+
+I use the true data points to plot.
+```{r}
+plot_low <- createPlot(data_low, 
+           result_low, 
+           "RLM model with the low error data", 
+           "RLM model with the low error data. Red line as true coefficient. Yellow is RLM fitted coefficient" )
+
+plot_low
+```
+
+## Intermediate error bootstrapping results
+
+```{r}
+
+result_intermediate <- RLM(1234, RLM_boot, data_intermediate, D47~Temperature, 1000)
+
+rbind(result_intermediate) %>% kable()
+```
+
+### Comparing result to the true parameters
+Plot confident interval area of the median slope/intercept of bootstrapping results
+And comparing it to the true slope/intercept
+
+I use the true data points to plot.
+```{r}
+plot_intermediate <- createPlot(data_intermediate, 
+           result_intermediate, 
+           "RLM model with the intermediate error data", 
+           "RLM model with the intermediate error data. Red line as true coefficient. Yellow is RLM fitted coefficient")
+
+plot_intermediate
+```
+
+## High error bootstrapping results
+
+```{r}
+result_high <- RLM(1234, RLM_boot, data_high, D47~Temperature, 1000)
+
+rbind(result_high) %>% kable()
+```
+
+
+### Comparing result to the true parameters
+Plot confident interval area of the median slope/intercept of bootstrapping results
+And comparing it to the true slope/intercept
+
+I use the true data points to plot.
+```{r}
+plot_high <- createPlot(data_high, 
+           result_high, 
+           "OLS model with the high error data", 
+           "OLS model with the high error data. Red line as true coefficient. Yellow is RLM fitted coefficient")
+
+plot_high
+```
+
+
+## Results across different data sets
+
+```{r}
+rbind(result_low, result_intermediate, result_high) %>% kable()
+```
