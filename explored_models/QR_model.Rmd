@@ -1,7 +1,7 @@
 ---
-title: "RLM Model"
+title: "Quantile Model"
 author: "Quan Gan"
-date: "2/9/2022"
+date: "3/27/2022"
 output: 
   html_document:
     toc: true
@@ -15,7 +15,7 @@ library(ggplot2)
 library(boot)
 library(knitr)
 library(greekLetters)
-library(MASS)
+library(quantreg)
 library(boot)
 ```
 
@@ -28,26 +28,26 @@ data_intermediate <- read_csv("../Data/Dataset_S2_Mar8.csv")
 data_high <- read_csv("../Data/Dataset_S3_Mar8.csv")
 ```
 
-## The helper functions for bootstrapping 1000 replicates with robust regression models and data visulization.
+## The helper functions for bootstrapping 1000 replicates with Quantile regression models and data visulization.
 ```{r}
 # https://www.statmethods.net/advstats/bootstrapping.html
 # Boot library docs
 # calculate the coefficient
-RLM_boot <- function(formula, data, indices) {
+QR_boot <- function(formula, data, indices) {
   d <- data[indices,]                                 # allows boot to select sample
   mark <- sample(                                     # Mark for train-test
     c(rep(0, 0.7*nrow(d)), 
     c(rep(1, 0.3*nrow(d)))))      
   train <- d[mark == 0,]                              # train data
   test <- d[mark == 1,]                               # test data
-  fit <- rlm(formula, data=train)                      # the OLS model
+  fit <- rq(formula, data=train)                      # the OLS model
   train_MSE <- mean((train$D47 - predict(fit))^2)     # Train set MSE
   test_MSE <- mean((test$D47 - predict(fit, newdata = test))^2)# Test set MSE
   return(c(coef(fit), train_MSE, test_MSE))                    # get intercept
 }
 
 # The OLS function with bootstrapping
-RLM <- function(seed, statistic, dataSet, formula, replicate){
+QR <- function(seed, statistic, dataSet, formula, replicate){
   set.seed(seed)
   results <- boot(data = dataSet,
                   statistic = statistic,
@@ -98,7 +98,7 @@ createPlot <- function(data, result, title, caption) {
 ## Low error bootstrapping results
 
 ```{r}
-result_low <- RLM(1234, RLM_boot, data_low, D47~Temperature, 1000)
+result_low <- QR(1234, QR_boot, data_low, D47~Temperature, 1000)
 
 rbind(result_low) %>% kable()
 ```
@@ -111,8 +111,8 @@ I use the true data points to plot.
 ```{r}
 plot_low <- createPlot(data_low, 
            result_low, 
-           "RLM model with the low error data", 
-           "RLM model with the low error data. Red line as true coefficient. Yellow is RLM fitted coefficient" )
+           "Quantile regression model with the low error data", 
+           "Quantile regression model with the low error data. Red line as true coefficient. Yellow is Quantile regression fitted coefficient" )
 
 plot_low
 ```
@@ -121,7 +121,7 @@ plot_low
 
 ```{r}
 
-result_intermediate <- RLM(1234, RLM_boot, data_intermediate, D47~Temperature, 1000)
+result_intermediate <- QR(1234, QR_boot, data_intermediate, D47~Temperature, 1000)
 
 rbind(result_intermediate) %>% kable()
 ```
@@ -134,8 +134,8 @@ I use the true data points to plot.
 ```{r}
 plot_intermediate <- createPlot(data_intermediate, 
            result_intermediate, 
-           "RLM model with the intermediate error data", 
-           "RLM model with the intermediate error data. Red line as true coefficient. Yellow is RLM fitted coefficient")
+           "Quantile regression model with the intermediate error data", 
+           "Quantile regression model with the intermediate error data. Red line as true coefficient. Yellow is Quantile regression fitted coefficient")
 
 plot_intermediate
 ```
@@ -143,7 +143,7 @@ plot_intermediate
 ## High error bootstrapping results
 
 ```{r}
-result_high <- RLM(1234, RLM_boot, data_high, D47~Temperature, 1000)
+result_high <- QR(1234, QR_boot, data_high, D47~Temperature, 1000)
 
 rbind(result_high) %>% kable()
 ```
@@ -157,8 +157,8 @@ I use the true data points to plot.
 ```{r}
 plot_high <- createPlot(data_high, 
            result_high, 
-           "RLM model with the high error data", 
-           "RLM model with the high error data. Red line as true coefficient. Yellow is RLM fitted coefficient")
+           "Quantile regression model with the high error data", 
+           "Quantile regression model with the high error data. Red line as true coefficient. Yellow is Quantile regression fitted coefficient")
 
 plot_high
 ```
