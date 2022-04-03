@@ -25,6 +25,7 @@ data_low <- read_csv("../Data/Dataset_S1_Mar8.csv")
 data_intermediate <- read_csv("../Data/Dataset_S2_Mar8.csv")
 data_high <- read_csv("../Data/Dataset_S3_Mar8.csv")
 ```
+
 ## The helper functions for bootstrapping 1000 replicates with OLS models and data visulization.
 ```{r}
 # https://www.statmethods.net/advstats/bootstrapping.html

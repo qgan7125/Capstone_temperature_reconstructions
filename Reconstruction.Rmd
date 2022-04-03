@@ -1,0 +1,337 @@
+---
+title: "Reconstruction"
+author: "Quan Gan"
+date: "4/3/2022"
+output: 
+  html_document:
+    toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+library(investr)
+library(tidyverse)
+library(ggplot2)
+library(boot)
+library(knitr)
+library(data.table)
+library(Rmisc)
+library(patchwork)
+# model libraries
+library(IsoplotR)
+library(deming)
+library(rstan)
+library(pracma)
+library(MASS)
+library(quantreg)
+```
+
+## load data in
+```{r}
+data_low <- read_csv("./Data/Dataset_S1_Mar8.csv")
+data_intermediate <- read_csv("./Data/Dataset_S2_Mar8.csv")
+data_high <- read_csv("./Data/Dataset_S3_Mar8.csv")
+```
+
+## helper function
+```{r}
+
+TRpredict <<- function(calData, 
+                       targety, 
+                       obCal){
+    calData <<- calData
+    obCal<<-obCal
+    std <- function(x) sd(x)/sqrt(length(x))
+    
+    mod <- stats::nls(formula = D47  ~ a + b1*Temperature,
+                            data = calData, 
+                            start = list(a = median(obCal[,1]),b1 = median(obCal[,2])),
+                            lower = c(a = (median(obCal[,1])-std(obCal[,1])*1.96),b1 = (median(obCal[,2])-std(obCal[,2])*1.96)),
+                            upper = c(a = (median(obCal[,1])+std(obCal[,1])*1.96),b1 = (median(obCal[,2])+std(obCal[,2])*1.96)),
+                            algorithm = "port") 
+      
+    estimate <- investr::invest(mod, y0 = targety,
+                                   interval = "percentile", 
+                                   seed = 3,  nsim=1000,
+                                   extendInt="yes", progress=F, 
+                                   lower=-100,
+                                   upper=100)
+
+    preds <- cbind.data.frame(D47= mean( targety ), 
+                              D47se=sd(targety)/sqrt(length(targety)),
+                              temp=estimate$estimate, se=estimate$se, lwr=estimate$lower, upr=estimate$upper
+    )
+  
+    predsUp<- sqrt(10^6/(preds$temp+preds$se))-273.15
+    predsPoint <- sqrt(10^6/preds$temp)-273.15
+    
+    preds <- cbind.data.frame(D47= preds$D47, 
+                              D47se= preds$D47se, 
+                              temp=predsPoint, 
+                              se=predsPoint-predsUp, 
+                              lwr=predsPoint-((predsPoint-predsUp)*1.96), 
+                              upr=predsPoint+((predsPoint-predsUp)*1.96)
+                              )
+    
+    return(preds)
+
+}
+
+fit_model <- function(seed, statistic, dataSet, formula, replicate){
+  set.seed(seed)
+  results <- boot(data = dataSet,
+                  statistic = statistic,
+                  R = replicate,
+                  formula = formula)
+  
+  return (results$t)
+}
+```
+
+### different model setup
+```{r}
+OLS_boot <- function(formula, data, indices){
+  d <- data[indices, ]
+  OLS <- lm(formula, d)
+  return (c(coef(OLS)))
+}
+
+york_boot <- function(formula, data, indices){
+  d <- data[indices, ]
+  york_data <- cbind(d$Temperature, d$TempError, d$D47, d$D47error)
+  fit_model <- york(york_data)
+  return (c(fit_model$a['a'], fit_model$b['b']))
+}
+
+deming_boot <- function(formula, data, indices){
+  d <- data[indices, ]
+  fit_model <- deming(formula, data=d, xstd=abs(TempError), ystd=abs(D47error)) 
+  return (c(fit_model$coefficients[1], fit_model$coefficients[2]))
+}
+
+ODR_boot <- function(formula, data, indices){
+  d <- data[indices, ]
+  fit_model <- odregress(d$Temperature, d$D47)
+  return (c(fit_model$coef[2], fit_model$coef[1]))
+}
+
+QR_boot <- function(formula, data, indices){
+  d <- data[indices, ]
+  fit_model <- rq(formula, data=d)
+  return (c(coef(fit_model)))
+}
+
+rlm_boot <- function(formula, data, indices){
+  d <- data[indices, ]
+  fit_model <- rlm(formula, data=d)
+  return (c(coef(fit_model)))
+}
+
+TS_boot <- function(formula, data, indices){
+  d <- data[indices, ]
+  fit_model <- theilsen(formula, data=d)
+  return (c(coef(fit_model)))
+}
+
+LSMC_fit <- function(data, seed){
+  set.seed(seed)
+  N <- nrow(data)           #Sample Size
+  M <- 1000                 #Number of experiments/iterations
+  
+  ## Storage
+  intercept_DT <- rep(0, M)
+  slope_DT <- rep(0, M)
+
+  ## begin Monte Carlo
+  for (i in 1:M) {
+    U_i = rnorm(N, 0, sqrt(abs(data$D47error)))
+    x_i = rnorm(N, data$x_TRUE, sqrt(abs(data$TempError)))
+    # Y_i = alpha_TRUE + beta_TRUE * x_i + U_i
+    Y_i = rnorm(N, data$y_TRUE, sqrt(abs(data$D47error)))
+    
+    # Formulate data.table
+    data_i = data.table(Y = Y_i, X = x_i)
+    
+    # Run regressions
+    ols_i <- lm(data = data_i, Y ~ X)
+    
+    
+    # Extract coefficient and save
+    slope_DT[i] <- coef(ols_i)[2]
+    intercept_DT[i] <- coef(ols_i)[1]
+  }
+  
+  return (cbind(intercept_DT, slope_DT))
+}
+
+Bayesian_fit <- function(data, seed){
+  rstan_options(auto_write = TRUE)
+  stan_date <- list(N = nrow(data), 
+                        Temperature = data$Temperature, 
+                        Temperature_true = data$x_TRUE,
+                        Temperature_error = abs(data$TempError),
+                        D47 = data$D47,
+                        D47_true = data$y_TRUE,
+                        D47_error = abs(data$D47error))
+  
+  Bayesian_model <- stan(file = "./Baseline_models/stan/Bayesian_linear_model_with_error.stan", data = stan_date, iter = 1000, chains = 4, seed = seed)
+  
+  Bayesian_result <- rstan::extract(Bayesian_model)
+  
+  Intercept_names <- c("Median Intercept", "2.5%", "92.5%")
+  Intercept_values <- c(summary(Bayesian_result$alpha)[3], summary(Bayesian_result$alpha)[2],summary(Bayesian_result$alpha)[5])
+  names(Intercept_values) <- Intercept_names
+  
+  Slope_names <- c("Median Slope", "2.5%", "92.5%")
+  Slope_values <- c(summary(Bayesian_result$beta)[3], summary(Bayesian_result$beta)[2],summary(Bayesian_result$beta)[5])
+  names(Slope_values) <- Slope_names
+  
+  return (c(Intercept_values, Slope_values))
+}
+```
+
+## Calculate coefficiences
+```{r}
+calCoef <- function(data){
+  OLS_result <- fit_model(1234, OLS_boot, data, D47~Temperature, 1000)
+  york_result <- fit_model(1234, york_boot, data, D47~Temperature, 1000)
+  deming_result <- fit_model(1234, deming_boot, data, D47~Temperature, 1000)
+  bayesian_resule <- Bayesian_fit(data, 1234)
+  LSMC_result <- LSMC_fit(data_low, 1234)
+  ODR_result <- fit_model(1234, ODR_boot, data, D47~Temperature, 1000)
+  QR_result <- fit_model(1234, QR_boot, data, D47~Temperature, 1000)
+  rlm_result <- fit_model(1234, rlm_boot, data, D47~Temperature, 1000)
+  TS_result <- fit_model(1234, TS_boot, data, D47~Temperature, 1000)
+  
+  return(list(OLS = OLS_result, 
+              york = york_result, 
+              deming = deming_result,
+              bayesian = bayesian_resule, 
+              LSMC = LSMC_result, 
+              ODR = ODR_result, 
+              QR = QR_result, 
+              RLM = rlm_result, 
+              TS = TS_result))
+}
+```
+
+
+
+```{r}
+coefficients_low <- calCoef(data_low)
+```
+
+
+## inversion predict
+
+```{r}
+reconstruct <- function(data, nobs, target, targetError, coeffi){
+  OLS_recon <- TRpredict(data_low, rnorm(nobs, mean = target, sd = targetError), coefficients_low[["OLS"]])
+  print(OLS_recon)
+  york_recon <- TRpredict(data_low, rnorm(nobs, mean = target, sd = targetError), coefficients_low[["york"]])
+  print(york_recon)
+  deming_recon <- TRpredict(data_low, rnorm(nobs, mean = target, sd = targetError), coefficients_low[["deming"]])
+  print(deming_recon)
+  LSMC_recon <- TRpredict(data_low, rnorm(nobs, mean = target, sd = targetError), coefficients_low[["LSMC"]])
+  print(LSMC_recon)
+  ODR_recon <- TRpredict(data_low, rnorm(nobs, mean = target, sd = targetError), coefficients_low[["ODR"]])
+  print(ODR_recon)
+  QR_recon <- TRpredict(data_low, rnorm(nobs, mean = target, sd = targetError), coefficients_low[["QR"]])
+  print(QR_recon)
+  RLM_recon <- TRpredict(data_low, rnorm(nobs, mean = target, sd = targetError), coefficients_low[["RLM"]])
+  print(RLM_recon)
+  TS_recon <- TRpredict(data_low, rnorm(nobs, mean = target, sd = targetError), coefficients_low[["TS"]])
+  print(TS_recon)
+  
+  modelName <- c("OLS", "York", "Deming", "LSMC","ODR", "Quantile", "Robust", "Theil-Sen")
+  
+  performances <- rbind(OLS_recon,
+                        york_recon,
+                        deming_recon,
+                        LSMC_recon,
+                        ODR_recon,
+                        QR_recon,
+                        RLM_recon,
+                        TS_recon)
+
+  return (cbind(modelName, performances))
+}
+
+drawGraph <- function(data, miny, maxy, title, caption) {
+  data %>% 
+    ggplot(aes(x = modelName, y = temp, fill = modelName)) +
+    geom_col() +
+    geom_text(aes(label=round(temp, 4)), position=position_dodge(width=0.9), vjust=-0.25) +
+    coord_cartesian(ylim=c(miny, maxy)) +
+    labs(title = title,
+         caption = caption) + 
+    theme(plot.title = element_text(size=10))
+}
+```
+
+### D47 = 0.6, error = 0.005
+```{r}
+recon_1 <- reconstruct(data_low, 1000, 0.6, 0.005, coefficients_low)
+
+drawGraph(recon_1,  
+          max(recon_1$temp) * .9,
+          max(recon_1$temp),
+          expression(paste("Temperature reconstruction for D47 = 0.68%", ""[o]," error = 0.005%"[o] ," True Temperature = 60", ""^"o", "C")),
+          "Using low error data set fits different models \n Predicting temperature from D47 and models' coefficients")
+```
+
+### D47 = 0.6, error = 0.2
+```{r}
+recon_2 <- reconstruct(data_low, 1000, 0.6, 0.2, coefficients_low)
+
+drawGraph(recon_2,
+          max(recon_2$temp) * .7,
+          max(recon_2$temp),
+          expression(paste("Temperature reconstruction for D47 = 0.6%", ""[o]," error = 0.2%"[o] ," True Temperature = 60", ""^"o", "C")),
+          "Using low error data set fits different models \n Predicting temperature from D47 and models' coefficients")
+```
+
+### D47 = 0.7, error = 0.005
+```{r}
+recon_3 <- reconstruct(data_low, 1000, 0.7, 0.005, coefficients_low)
+
+drawGraph(recon_3,
+          max(recon_3$temp) * .95,
+          max(recon_3$temp),
+          expression(paste("Temperature reconstruction for D47 = 0.7%", ""[o]," error = 0.005%"[o] ," True Temperature = 19", ""^"o", "C")),
+          "Using low error data set fits different models \n Predicting temperature from D47 and models' coefficients")
+```
+
+### D47 = 0.7, error = 0.2
+```{r}
+recon_4 <- reconstruct(data_low, 1000, 0.7, 0.2, coefficients_low)
+
+drawGraph(recon_4,
+          max(recon_4$temp) * .5,
+          max(recon_4$temp), 
+          expression(paste("Temperature reconstruction for D47 = 0.7%", ""[o]," error = 0.2%"[o] ," True Temperature = 19", ""^"o", "C")),
+          "Using low error data set fits different models \n Predicting temperature from D47 and models' coefficients")
+```
+
+### D47 = 0.8, error = 0.005
+```{r}
+recon_5 <- reconstruct(data_low, 1000, 0.8, 0.005, coefficients_low)
+
+drawGraph(recon_5,
+          min(recon_5$temp) * .95,
+          min(recon_5$temp),
+          expression(paste("Temperature reconstruction for D47 = 0.8%", ""[o]," error = 0.005%"[o] ," True Temperature = -9.8", ""^"o", "C")),
+          "Using low error data set fits different models \n Predicting temperature from D47 and models' coefficients")
+```
+
+### D47 = 0.8, error = 0.2
+```{r}
+recon_6 <- reconstruct(data_low, 1000, 0.8, 0.2, coefficients_low)
+
+drawGraph(recon_6,
+          min(recon_6$temp) * .5,
+          min(recon_6$temp), 
+          expression(paste("Temperature reconstruction for D47 = 0.8%", ""[o]," error = 0.2%"[o] ," True Temperature = -9.8", ""^"o", "C")),
+          "Using low error data set fits different models \n Predicting temperature from D47 and models' coefficients")
+```
+

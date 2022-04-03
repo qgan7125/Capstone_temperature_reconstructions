@@ -1,0 +1,338 @@
+---
+title: "Model_comparison"
+author: "Quan Gan"
+date: "4/2/2022"
+output: 
+  html_document:
+    toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+library(tidyverse)
+library(ggplot2)
+library(boot)
+library(knitr)
+library(greekLetters)
+library(data.table)
+library(Rmisc)
+library(patchwork)
+# model libraries
+library(IsoplotR)
+library(deming)
+library(rstan)
+library(pracma)
+library(MASS)
+library(quantreg)
+```
+
+## load data in
+We only need 50 points for comparison.
+```{r}
+data_low <- read_csv("./Data/Dataset_S1_Mar8.csv")
+data_intermediate <- read_csv("./Data/Dataset_S2_Mar8.csv")
+data_high <- read_csv("./Data/Dataset_S3_Mar8.csv")
+
+set.seed(123)
+mark <- sample(nrow(data_low), 50, replace = FALSE)
+data_50 <- data_low[mark, ]
+```
+
+## helper functions
+```{r}
+fit <- function(seed, statistic, dataSet, formula, replicate){
+  set.seed(seed)
+  results <- boot(data = dataSet,
+                  statistic = statistic,
+                  R = replicate,
+                  formula = formula)
+  
+  CI_Intecept <- boot.ci(results, type="bca", index=1)
+  Intercept_names <- c("Median Intercept", "2.5%", "92.5%")
+  Intercept_values <- c(median(results$t[,1]), CI_Intecept$bca[4], CI_Intecept$bca[5])
+  names(Intercept_values) <- Intercept_names
+  
+  CI_Slope <- boot.ci(results, type="bca", index=2)
+  Slope_names <- c("Median Slope",  "2.5%", "92.5%")
+  Slope_values <- c(median(results$t[,2]), CI_Slope$bca[4], CI_Slope$bca[5])
+  names(Slope_values) <- Slope_names
+
+  return (c(Intercept_values, Slope_values))
+}
+
+
+# create data visualization
+createPlot <- function(data, result, title, caption, model) {
+  plot_object <- data %>% 
+    ggplot(aes(x = x_TRUE, y=y_TRUE)) + 
+    geom_point(alpha= 0.5) +
+    geom_ribbon(aes(ymin = result[5] * x_TRUE + result[3], 
+                    ymax = result[6] * x_TRUE + result[2]), 
+                    fill = "orange") +
+    geom_ribbon(aes(ymin = (x_TRUE + min(TempError)) * 0.0369 + 0.268 + min(D47error) , 
+                    ymax = (x_TRUE + max(TempError)) * 0.0369 + 0.268 + max(D47error)), 
+                    fill = "white", alpha =  .9) +
+    annotate("text", 
+             x = 17.5, 
+             y = 0.5, 
+             hjust = 1,
+             label = paste(greeks("beta"), "=",round(result[4], 4), "( 95% CI", round(result[5], 4),"-", round(result[6],4), ")\n", 
+                          greeks("alpha"), "=", round(result[1], 4), "( 95% CI", round(result[2], 4),"-", round(result[3],4), ")")) +
+    annotate("text",
+             x = 5,
+             y = 0.9,
+             hjust = 0,
+             label = model) +
+    labs(title = title,
+         caption = caption)+ 
+    xlab(expression(paste("True Temperature ", "10"^6, "/T"^2 ," in ", ""^"o", "K"))) + 
+    ylab(expression(paste("True D47 (", ""^"o", "/"["oo"], ")"))) 
+  return(plot_object)
+}
+
+```
+
+### OLS model
+```{r}
+OLS_boot <- function(formula, data, indices){
+  d <- data[indices, ]
+  OLS <- lm(formula, d)
+  return (c(coef(OLS)))
+}
+
+OLS_model <- fit(1234, OLS_boot, data_50, D47~Temperature, 1000)
+
+OLS_plot <- createPlot(data_50, 
+           OLS_model, 
+           "", 
+           "",
+           bquote(paste(bold("A. "), "Ordinary least squares")))
+
+OLS_plot
+```
+
+### York model
+```{r}
+york_boot <- function(formula, data, indices){
+  d <- data[indices, ]
+  york_data <- cbind(d$Temperature, d$TempError, d$D47, d$D47error)
+  fit_model <- york(york_data)
+  return (c(fit_model$a['a'], fit_model$b['b']))
+}
+
+york_model <- fit(1234, york_boot, data_50, D47~Temperature, 1000)
+
+york_plot <- createPlot(data_50, 
+           york_model, 
+           "", 
+           "",
+           bquote(paste(bold("B. "), "York regression")))
+
+york_plot
+```
+
+### Deming model
+```{r}
+deminig_boot <- function(formula, data, indices){
+  d <- data[indices, ]
+  fit_model <- deming(formula, data=d, xstd=abs(TempError), ystd=abs(D47error)) 
+  return (c(fit_model$coefficients[1], fit_model$coefficients[2]))
+}
+
+deming_model <- fit(1234, deminig_boot, data_50, D47~Temperature, 1000)
+
+deming_plot <- createPlot(data_50, 
+           deming_model, 
+           "", 
+           "",
+           bquote(paste(bold("C. "), "Deming regression")))
+
+deming_plot
+```
+
+### Beyesian linear regression with error
+```{r}
+Bayesian_fit <- function(data, seed){
+  rstan_options(auto_write = TRUE)
+  stan_date <- list(N = nrow(data), 
+                        Temperature = data$Temperature, 
+                        Temperature_true = data$x_TRUE,
+                        Temperature_error = abs(data$TempError),
+                        D47 = data$D47,
+                        D47_true = data$y_TRUE,
+                        D47_error = abs(data$D47error))
+  
+  Bayesian_model <- stan(file = "./Baseline_models/stan/Bayesian_linear_model_with_error.stan", data = stan_date, iter = 1000, chains = 4, seed = seed)
+  
+  Bayesian_result <- rstan::extract(Bayesian_model)
+  
+  Intercept_names <- c("Median Intercept", "2.5%", "92.5%")
+  Intercept_values <- c(summary(Bayesian_result$alpha)[3], summary(Bayesian_result$alpha)[2],summary(Bayesian_result$alpha)[5])
+  names(Intercept_values) <- Intercept_names
+  
+  Slope_names <- c("Median Slope", "2.5%", "92.5%")
+  Slope_values <- c(summary(Bayesian_result$beta)[3], summary(Bayesian_result$beta)[2],summary(Bayesian_result$beta)[5])
+  names(Slope_values) <- Slope_names
+  
+  return (c(Intercept_values, Slope_values))
+}
+
+Bayesian_result <- Bayesian_fit(data_50, 1234)
+
+Bayesin_plot <- createPlot(data_50, 
+           Bayesian_result, 
+           "", 
+           "",
+           bquote(paste(bold("D. "), "Bayesian linear model with errors")))
+
+Bayesin_plot
+
+```
+
+### ODR model
+```{r}
+ODR_boot <- function(formula, data, indices){
+  d <- data[indices, ]
+  fit_model <- odregress(d$Temperature, d$D47)
+  return (c(fit_model$coef[2], fit_model$coef[1]))
+}
+
+ODR_model <- fit(1234, ODR_boot, data_50, D47~Temperature, 1000)
+
+ODR_plot <- createPlot(data_50, 
+           ODR_model, 
+           "", 
+           "",
+           bquote(paste(bold("E. "), "Orthogonal Distance Regression")))
+
+ODR_plot
+```
+
+### LSMC model
+```{r}
+LSMC_fit <- function(data, seed){
+  set.seed(seed)
+  N <- nrow(data)           #Sample Size
+  M <- 1000                 #Number of experiments/iterations
+  
+  ## Storage
+  intercept_DT <- rep(0, M)
+  slope_DT <- rep(0, M)
+
+  ## begin Monte Carlo
+  for (i in 1:M) {
+    U_i = rnorm(N, 0, sqrt(abs(data$D47error)))
+    x_i = rnorm(N, data$x_TRUE, sqrt(abs(data$TempError)))
+    # Y_i = alpha_TRUE + beta_TRUE * x_i + U_i
+    Y_i = rnorm(N, data$y_TRUE, sqrt(abs(data$D47error)))
+    
+    # Formulate data.table
+    data_i = data.table(Y = Y_i, X = x_i)
+    
+    # Run regressions
+    ols_i <- lm(data = data_i, Y ~ X)
+    
+    
+    # Extract coefficient and save
+    slope_DT[i] <- coef(ols_i)[2]
+    intercept_DT[i] <- coef(ols_i)[1]
+  }
+  
+  # Summary statistics
+  estimate_DT <- data.table(alpha = intercept_DT, beta = slope_DT)
+  
+  inteceptCI <- CI(estimate_DT$alpha)
+  slopeCI <- CI(estimate_DT$beta)
+  Intercept_names <- c("Median Intercept",  "2.5%", "92.5%")
+  Intercept_values <- c(summary(estimate_DT$alpha)[3], inteceptCI[3], inteceptCI[1])
+  names(Intercept_values) <- Intercept_names
+  
+  Slope_names <- c("Median Slope", "2.5%", "92.5%")
+  Slope_values <- c(summary(estimate_DT$beta)[3], slopeCI[3], slopeCI[1])
+  names(Slope_values) <- Slope_names
+  
+  return (c(Intercept_values, Slope_values))
+}
+  
+
+LSMC_result <- LSMC_fit(data_50, 1234)
+
+
+LSMC_plot <- createPlot(data_50, 
+           LSMC_result, 
+           "", 
+           "",
+           bquote(paste(bold("F. "), "Least square monte carlo")))
+
+LSMC_plot
+
+```
+
+### QR model
+```{r}
+QR_boot <- function(formula, data, indices){
+  d <- data[indices, ]
+  fit_model <- rq(formula, data=d)
+  return (c(coef(fit_model)))
+}
+
+QR_model <- fit(1234, QR_boot, data_50, D47~Temperature, 1000)
+
+QR_plot <- createPlot(data_50, 
+           QR_model, 
+           "", 
+           "",
+           bquote(paste(bold("G. "), "Quantile Regression")))
+
+QR_plot
+```
+
+### Robust regression
+```{r}
+rlm_boot <- function(formula, data, indices){
+  d <- data[indices, ]
+  fit_model <- rlm(formula, data=d)
+  return (c(coef(fit_model)))
+}
+
+rlm_model <- fit(1234, rlm_boot, data_50, D47~Temperature, 1000)
+
+rlm_plot <- createPlot(data_50, 
+           rlm_model, 
+           "", 
+           "",
+           bquote(paste(bold("H. "), "Robust Regression")))
+
+rlm_plot
+```
+
+### Theil-sen regression
+```{r}
+TS_boot <- function(formula, data, indices){
+  d <- data[indices, ]
+  fit_model <- theilsen(formula, data=d)
+  return (c(coef(fit_model)))
+}
+
+TS_model <- fit(1234, TS_boot, data_50, D47~Temperature, 1000)
+
+TS_plot <- createPlot(data_50, 
+           TS_model, 
+           "", 
+           "",
+           bquote(paste(bold("I. "), "Theil-sen Regression")))
+
+TS_plot
+```
+
+## Merge all plots
+```{r fig.align="center", echo = FALSE, fig.width = 12, fig.height= 16}
+(OLS_plot | york_plot) /
+(deming_plot | Bayesin_plot) /
+(ODR_plot | LSMC_plot) /
+(QR_plot | rlm_plot) /
+(TS_plot + plot_spacer())
+
+
+```
+
