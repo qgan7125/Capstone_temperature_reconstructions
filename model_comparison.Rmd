@@ -331,7 +331,12 @@ TS_plot
 (deming_plot | Bayesin_plot) /
 (ODR_plot | LSMC_plot) /
 (QR_plot | rlm_plot) /
-(TS_plot + plot_spacer())
+(TS_plot + plot_spacer()) + plot_annotation(
+  title = 'The model performances on 50 data points',
+  subtitle = 'These 9 plots will compare the true interval and CI of coeffcients',
+  caption = '4 Baseline models and 5 explored models. The white areas are the interval of true parameters.\n
+  The orange area are the interval of coeffcicents of fitted models'
+)
 
 
 ```
