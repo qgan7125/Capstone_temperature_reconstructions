@@ -28,7 +28,7 @@ library(quantreg)
 
 ## load data in
 ```{r}
-data_low <- read_csv("./Data/Dataset_S1_Mar8.csv")
+ data_low <- read_csv("./Data/Dataset_S1_Mar8.csv")
 data_intermediate <- read_csv("./Data/Dataset_S2_Mar8.csv")
 data_high <- read_csv("./Data/Dataset_S3_Mar8.csv")
 ```
@@ -38,8 +38,6 @@ data_high <- read_csv("./Data/Dataset_S3_Mar8.csv")
 
 TRpredict <- function(calData, 
                      targety,
-                     targetyError,
-                     nObs,
                      obCal){
   
     calData <<- calData
@@ -52,7 +50,7 @@ TRpredict <- function(calData,
                                 upper = c(a = (mean(obCal[,1])+std(obCal[,1])*1.96),b1 = (mean(obCal[,2])+std(obCal[,2])*1.96)),
                                 algorithm = "port") 
     
-    estimate <- investr::invest(mod, y0 = rnorm(nObs, mean=targety, sd=targetyError),
+    estimate <- investr::invest(mod, y0 = targety,
                                  interval = "percentile",  seed = 3,  nsim=1000,
                                  extendInt="yes", progress=F, 
                                  lower=-100,
@@ -60,8 +58,8 @@ TRpredict <- function(calData,
     
     
   
-    preds <- cbind.data.frame(D47= targety, 
-                            D47error=targetyError,
+    preds <- cbind.data.frame(D47= mean(targety), 
+                            D47error=sd(targety)/sqrt(length(targety)),
                             temp=estimate$estimate, 
                             se=estimate$se, 
                             lwr=estimate$lower, 
@@ -216,24 +214,24 @@ calCoef <- function(data){
 ## inversion predict
 
 ```{r}
-reconstruct <- function(data, D47, D47Error, n , coeffi){
-  OLS_recon <- TRpredict(data, D47, D47Error, n , coeffi[["OLS"]])
+reconstruct <- function(data, new_D47 , coeffi){
+  OLS_recon <- TRpredict(data, new_D47 , coeffi[["OLS"]])
   print(OLS_recon)
-  york_recon <- TRpredict(data, D47, D47Error, n , coeffi[["york"]])
+  york_recon <- TRpredict(data, new_D47, coeffi[["york"]])
   print(york_recon)
-  deming_recon <- TRpredict(data, D47, D47Error, n , coeffi[["deming"]])
+  deming_recon <- TRpredict(data, new_D47 , coeffi[["deming"]])
   print(deming_recon)
-  bayesian_recon <- TRpredict(data, D47, D47Error, n , coeffi[["bayesian"]])
+  bayesian_recon <- TRpredict(data, new_D47 , coeffi[["bayesian"]])
   print(bayesian_recon)
-  LSMC_recon <- TRpredict(data, D47, D47Error, n , coeffi[["LSMC"]])
+  LSMC_recon <- TRpredict(data, new_D47 , coeffi[["LSMC"]])
   print(LSMC_recon)
-  ODR_recon <- TRpredict(data, D47, D47Error, n , coeffi[["ODR"]])
+  ODR_recon <- TRpredict(data, new_D47 , coeffi[["ODR"]])
   print(ODR_recon)
-  QR_recon <- TRpredict(data, D47, D47Error, n , coeffi[["QR"]])
+  QR_recon <- TRpredict(data, new_D47, coeffi[["QR"]])
   print(QR_recon)
-  RLM_recon <- TRpredict(data, D47, D47Error, n , coeffi[["RLM"]])
+  RLM_recon <- TRpredict(data, new_D47 , coeffi[["RLM"]])
   print(RLM_recon)
-  TS_recon <- TRpredict(data, D47, D47Error, n , coeffi[["TS"]])
+  TS_recon <- TRpredict(data, new_D47 , coeffi[["TS"]])
   print(TS_recon)
   
   modelName <- c("OLS", "York", "Deming", "bayesian", "LSMC","ODR", "Quantile", "Robust", "Theil-Sen")
@@ -296,23 +294,28 @@ coefficients_high <- calCoef(data_high)
 
 ```{r fig.align="center", echo = FALSE, fig.width = 12, fig.height= 14}
 
-set.seed(123)
-recon_6_error <- reconstruct(data_low, 0.6, 0.05, 1000, coefficients_low)
-recon_6_error$uncertainty <- 60 - recon_6_error$temp
+set.seed(3)
+new_D47 <- rnorm(1000, 0.6, 0)
+new_D47_error <- rnorm(1000, 0.6, 0.05)
+recon_6 <- reconstruct(data_low, new_D47, coefficients_low)
+recon_6_error <- reconstruct(data_low, new_D47_error, coefficients_low)
+recon_6_error$uncertainty <- recon_6$temp - recon_6_error$temp
 graph6_low <- drawGraph(recon_6_error,  
                     -max(abs(recon_6_error$uncertainty)),
                     max(abs(recon_6_error$uncertainty)))
 
-set.seed(123)
-recon_6_error <- reconstruct(data_intermediate, 0.6, 0.05, 1000, coefficients_intermediate)
-recon_6_error$uncertainty <- 60 - recon_6_error$temp
+set.seed(3)
+recon_6 <- reconstruct(data_intermediate, new_D47, coefficients_intermediate)
+recon_6_error <- reconstruct(data_intermediate, new_D47_error, coefficients_intermediate)
+recon_6_error$uncertainty <- recon_6$temp - recon_6_error$temp
 graph6_intermediate <- drawGraph(recon_6_error,  
                     -max(abs(recon_6_error$uncertainty)),
                     max(abs(recon_6_error$uncertainty)))
 
-set.seed(123)
-recon_6_error <- reconstruct(data_high, 0.6, 0.05, 1000, coefficients_high)
-recon_6_error$uncertainty <- 60 - recon_6_error$temp
+set.seed(3)
+recon_6 <- reconstruct(data_high, new_D47, coefficients_high)
+recon_6_error <- reconstruct(data_high, new_D47_error, coefficients_high)
+recon_6_error$uncertainty <- recon_6$temp - recon_6_error$temp
 graph6_high <- drawGraph(recon_6_error,  
                     -max(abs(recon_6_error$uncertainty)),
                     max(abs(recon_6_error$uncertainty)))
@@ -326,22 +329,25 @@ graph6_low / graph6_intermediate / graph6_high
 ```{r fig.align="center", echo = FALSE, fig.width = 12, fig.height= 14}
 
 set.seed(123)
+recon_7 <- reconstruct(data_low, 0.7, 0, 1000, coefficients_low)
 recon_7_error <- reconstruct(data_low, 0.7, 0.05, 1000, coefficients_low)
-recon_7_error$uncertainty <- 19 - recon_7_error$temp
+recon_7_error$uncertainty <- recon_7$temp - recon_7_error$temp
 graph7_low <- drawGraph(recon_7_error,  
                     -max(abs(recon_7_error$uncertainty)),
                     max(abs(recon_7_error$uncertainty)))
 
 set.seed(123)
+recon_7 <- reconstruct(data_intermediate, 0.7, 0, 1000, coefficients_intermediate)
 recon_7_error <- reconstruct(data_intermediate, 0.7, 0.05, 1000, coefficients_intermediate)
-recon_7_error$uncertainty <- 19 - recon_7_error$temp
+recon_7_error$uncertainty <- recon_7$temp - recon_7_error$temp
 graph7_intermediate <- drawGraph(recon_7_error,  
                     -max(abs(recon_7_error$uncertainty)),
                     max(abs(recon_7_error$uncertainty)))
 
 set.seed(123)
+recon_7 <- reconstruct(data_high, 0.7, 0, 1000, coefficients_high)
 recon_7_error <- reconstruct(data_high, 0.7, 0.05, 1000, coefficients_high)
-recon_7_error$uncertainty <- 19 - recon_7_error$temp
+recon_7_error$uncertainty <- recon_7$temp - recon_7_error$temp
 graph7_high <- drawGraph(recon_7_error,  
                     -max(abs(recon_7_error$uncertainty)),
                     max(abs(recon_7_error$uncertainty)))
@@ -354,22 +360,25 @@ graph7_low / graph7_intermediate / graph7_high
 ```{r fig.align="center", echo = FALSE, fig.width = 12, fig.height= 14}
 
 set.seed(123)
+recon_8 <- reconstruct(data_low, 0.8, 0, 1000, coefficients_low)
 recon_8_error <- reconstruct(data_low, 0.8, 0.05, 1000, coefficients_low)
-recon_8_error$uncertainty <- -9.8 - recon_8_error$temp
+recon_8_error$uncertainty <- recon_8$temp - recon_8_error$temp
 graph8_low <- drawGraph(recon_8_error,  
                     -max(abs(recon_8_error$uncertainty)),
                     max(abs(recon_8_error$uncertainty)))
 
 set.seed(123)
+recon_8 <- reconstruct(data_intermediate, 0.8, 0, 1000, coefficients_intermediate)
 recon_8_error <- reconstruct(data_intermediate, 0.8, 0.05, 1000, coefficients_intermediate)
-recon_8_error$uncertainty <- -9.8 - recon_8_error$temp
+recon_8_error$uncertainty <- recon_8$temp - recon_8_error$temp
 graph8_intermediate <- drawGraph(recon_8_error,  
                     -max(abs(recon_8_error$uncertainty)),
                     max(abs(recon_8_error$uncertainty)))
 
 set.seed(123)
+recon_8 <- reconstruct(data_high, 0.8, 0, 1000, coefficients_high)
 recon_8_error <- reconstruct(data_high, 0.8, 0.05, 1000, coefficients_high)
-recon_8_error$uncertainty <- -9.8 - recon_8_error$temp
+recon_8_error$uncertainty <- recon_8$temp - recon_8_error$temp
 graph8_high <- drawGraph(recon_8_error,  
                     -max(abs(recon_8_error$uncertainty)),
                     max(abs(recon_8_error$uncertainty)))

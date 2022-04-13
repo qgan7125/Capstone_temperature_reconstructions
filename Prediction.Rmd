@@ -1,0 +1,126 @@
+---
+title: "Prediction"
+author: "Quan Gan"
+date: "4/10/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+source("Global.R")
+```
+
+```{r}
+drawGraph <- function(data, miny, maxy) {
+    ggplot(data, aes(x = names, y = uncertainty, fill = names)) +
+    geom_col() +
+    geom_text(aes(label=round(uncertainty, 4)), position=position_dodge(width=0.9), vjust=-0.25) +
+    coord_cartesian(ylim=c(miny, maxy)) +
+    theme(plot.title = element_text(size=10))
+  
+}
+```
+
+## calculate coefficient
+```{r}
+coefficients_low <- calCoef(data_low, 3, 1000)
+coefficients_intermediate <- calCoef(data_intermediate, 3, 1000)
+coefficients_high <- calCoef(data_high, 3, 1000)
+```
+
+
+
+
+```{r}
+calUncertainty <- function(data, recData, cals){
+  rec <- do.call(rbind,lapply(1:nrow(recData), function(x){
+                a <- predictTc(data, targety=recData$D47[x], obCal=cals)
+                b <- predictTc(data, targety=recData$D47[x]+recData$D47error[x], obCal=cals)
+                cbind.data.frame("D47"=recData$D47[x],"D47se"=recData$D47error[x], "Tc"=a$temp, "se"=a$temp-b$temp)
+              }))
+  return(mean(rec$se))
+}
+```
+
+```{r}
+meanUncertainty <- function(data, recData, cals){
+  OLSrec <- calUncertainty(data, recData, cals[['OLS']])
+  print(OLSrec)
+  yorkrec <- calUncertainty(data, recData, cals[['york']])
+  print(yorkrec)
+  demingrec <- calUncertainty(data, recData, cals[['deming']])
+  print(demingrec)
+  nonbayesianrec <- calUncertainty(data, recData, cals[['bayesian']])
+  print(nonbayesianrec)
+  bayesianrec <- mean(BayesianPredictions(as.matrix(cals[['bayesian']]), recData$D47, abs(recData$D47error), 100)$se)
+  print(bayesianrec)
+  LSMCrec <- calUncertainty(data, recData, cals[['LSMC']])
+  print(LSMCrec)
+  ODRrec <- calUncertainty(data, recData, cals[['ODR']])
+  print(ODRrec)
+  QRrec <- calUncertainty(data, recData, cals[['QR']])
+  print(QRrec)
+  RLMrec <- calUncertainty(data, recData, cals[['RLM']])
+  print(RLMrec)
+  TSrec <- calUncertainty(data, recData, cals[['TS']])
+  print(TSrec)
+  
+  return(list( uncertainty = c(OLSrec, 
+                               yorkrec,
+                               demingrec,
+                               nonbayesianrec,
+                               bayesianrec,
+                               LSMCrec,
+                               ODRrec,
+                               QRrec,
+                               RLMrec,
+                               TSrec),
+              names = c("OLS",
+                        "york",
+                        "deming",
+                        "nonbayesian",
+                        "bayesian",
+                        "LSMC",
+                        "ODR",
+                        "QR",
+                        "RLM",
+                        "TS")))
+}
+```
+
+```{r}
+set.seed(3)
+D47 <- 0.6
+D47error <-0.05
+recData <- data.frame(D47 = D47,
+                      D47error = D47error)
+
+```
+
+
+```{r}
+uncer_low <- meanUncertainty(data_low, recData, coefficients_low)
+
+uncer_intermediate <- meanUncertainty(data_intermediate, recData, coefficients_intermediate)
+
+uncer_high <- meanUncertainty(data_high, recData, coefficients_high)
+```
+
+```{r, fig.align = 'center', fig.width = 10}
+drawGraph(data.frame(uncer_low), min(data.frame(uncer_low)$uncertainty), max(data.frame(uncer_low)$uncertainty))
+```
+
+```{r, fig.align = 'center', fig.width = 10}
+
+drawGraph(data.frame(uncer_intermediate), min(data.frame(uncer_intermediate)$uncertainty), max(data.frame(uncer_intermediate)$uncertainty))
+```
+
+```{r, fig.align = 'center', fig.width = 10}
+
+drawGraph(data.frame(uncer_high), min(data.frame(uncer_high)$uncertainty), max(data.frame(uncer_high)$uncertainty))
+```
+
+
+
+
+

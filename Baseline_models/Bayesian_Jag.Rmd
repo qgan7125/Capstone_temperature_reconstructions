@@ -1,0 +1,133 @@
+---
+title: "Bayesian_jags"
+author: "Quan Gan"
+date: "4/10/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(R2jags)
+library(dplyr)
+
+
+```
+
+```{r}
+data_low <- read.csv("../Data/Dataset_S1_Mar8.csv")
+data_intermediate <- read.csv("../Data/Dataset_S2_Mar8.csv")
+data_high <- read.csv("../Data/Dataset_S3_Mar8.csv")
+```
+
+
+```{r}
+##Models
+alphaBLM1 = "dnorm(0.231,0.065)" 
+betaBLM1 = "dnorm(0.039,0.004)"
+
+BLM1<-paste(" model{
+    # Diffuse normal priors for predictors
+    alpha ~ ", alphaBLM1," \n ",
+    "beta ~ ", betaBLM1," \n ", 
+    "
+    tau <- pow(sigma, -2) 
+    sigma ~ dunif(0, 100)                             
+    
+    for (i in 1:N){
+        x[i] ~ dnorm(11,0.01)
+    }
+    # Likelihood
+    for (i in 1:N){
+        obsy[i] ~ dnorm(y[i],pow(erry[i],-2))
+        y[i] ~ dnorm(mu[i],tau)
+        obsx[i] ~ dnorm(x[i],pow(errx[i],-2))
+        mu[i] <- alpha + beta*x[i]
+    }
+    
+    ##Log-likelihood
+  for(i in 1:N){ 
+   regression_residual[i] <- y[i] - mu[i]
+   zloglik[i] <- logdensity.norm(y[i], mu[i], tau)
+  }
+}")
+
+initsSimple <- function () {
+  list(alpha = rnorm(1,0.231,0.065),
+       beta = rnorm(1,0.039,0.004))
+  
+}
+
+data_jag <- list(N = nrow(data_low),
+             x = data_low$x_TRUE,
+             y = data_low$y_TRUE,
+             obsx = data_low$Temperature,
+             obsy = data_low$D47,
+             errx = data_low$TempError,
+             erry = data_low$D47error)
+
+BLM1_fit <- jags(data = data_jag, inits = initsSimple,
+                     parameters = c("alpha","beta", "tau"),
+                     model = textConnection(BLM1), n.chains = 3, 
+                     n.iter = 1000)
+
+postBLM<- BLM1_fit$BUGSoutput$sims.matrix
+```
+
+
+```{r}
+D47Pred <- rnorm(100, 0.6, 0)
+D47Prederror <- abs(rnorm(100, 0, 0.05))
+
+BLM1<-paste("model{
+  for(i in 1:N){ 
+    x[i] ~ dnorm(11, 0.394)
+    y[i] ~ dnorm(mu2[i], tau)
+    mu2[i] <- alpha  + beta * x[i]
+    x2[i] <- sqrt((beta * 10^6) / (y[i] - alpha)) - 273.15
+
+    
+    terr[i] ~ dunif(0.00001, yp[i])
+    tp[i] <- y[i]+terr[i]
+    xp[i] ~ dnorm(11, 0.394)
+    yp[i] ~ dnorm(mu2p[i], tau)
+    mu2p[i] <- alpha  + beta * xp[i]
+    x2p[i] <- sqrt((beta * 10^6) / (tp[i] - alpha)) - 273.15
+    unc[i] <- x2[i]-x2p[i]
+    pred[i] ~ dnorm(x2[i], pow(unc[i],-2))
+  }
+  
+}")
+  
+postBLM<- as.matrix(coefficients_low[['bayesian']])
+
+ postPredBLM1 <- do.call(rbind,lapply(sample(1:nrow(postBLM), 100), function(j){
+    tryCatch({
+      LM_No_error_Data <- list(
+        N=length(D47Pred),
+        y=D47Pred,
+        yp = D47Prederror,
+        alpha=postBLM[j,'alpha'],
+        beta=postBLM[j,'beta'],
+        tau=postBLM[j,'tau']
+      )
+    
+    BLM1_fit_NoErrors <- jags(data = LM_No_error_Data,
+                              parameters = c("pred"),
+                              model = textConnection(BLM1), n.chains = 3,
+                              n.iter =  500)
+  
+    
+    
+    cbind.data.frame(D47Pred, 
+                     D47Prederror, 
+                     Tc=BLM1_fit_NoErrors$BUGSoutput$mean$pred,
+                     se=BLM1_fit_NoErrors$BUGSoutput$sd$pred
+                     )
+    
+  }, error=function(e){c(NA,NA)})
+  }))
+
+
+postPredBLM1 <-aggregate(postPredBLM1[, 2:3], list(postPredBLM1$D47Pred, postPredBLM1$D47Prederror), mean)
+mean(postPredBLM1$se)
+```
