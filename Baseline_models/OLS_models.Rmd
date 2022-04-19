@@ -95,7 +95,7 @@ createPlot <- function(data, result, title, caption) {
 ## Low error bootstrapping results
 
 ```{r}
-result_low <- OLS(1234, OLS_boot, data_low, D47~Temperature, 1000)
+result_low <- OLS(3, OLS_boot, data_low, D47~Temperature, 1000)
 
 rbind(result_low) %>% kable()
 ```
@@ -119,7 +119,7 @@ plot_low
 
 ```{r}
 
-result_intermediate <- OLS(1234, OLS_boot, data_intermediate, D47~Temperature, 1000)
+result_intermediate <- OLS(3, OLS_boot, data_intermediate, D47~Temperature, 1000)
 
 rbind(result_intermediate) %>% kable()
 ```
@@ -141,7 +141,7 @@ plot_intermediate
 ## High error bootstrapping results
 
 ```{r}
-result_high <- OLS(1234, OLS_boot, data_high, D47~Temperature, 1000)
+result_high <- OLS(3, OLS_boot, data_high, D47~Temperature, 1000)
 
 rbind(result_high) %>% kable()
 ```
@@ -167,6 +167,42 @@ plot_high
 ```{r}
 rbind(result_low, result_intermediate, result_high) %>% kable()
 ```
+```{r}
+set.seed(3)
+lm(D47~Temperature, data = data_low)
+```
+
+```{r}
+lm(D47~Temperature, data = data_intermediate)
+```
+```{r}
+lm(D47~Temperature, data = data_high)
+```
+
+```{r}
+
+set.seed((3))
+boot(data = data_low,
+                  statistic = OLS_boot,
+                  R = 100,
+                  formula =  D47~Temperature)
+```
+```{r}
+set.seed((3))
+boot(data = data_intermediate,
+                  statistic = OLS_boot,
+                  R = 100,
+                  formula =  D47~Temperature)
+```
+
+```{r}
+set.seed((3))
+boot(data = data_high,
+                  statistic = OLS_boot,
+                  R = 100,
+                  formula =  D47~Temperature)
+```
+
 By the OLS model, we could know when there is a low error in the data. The OLS 
 could produce the slope and intercept close to the true parameters but with the 
 increment of error, the OLS model would be less precise and accurate to predict 

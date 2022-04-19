@@ -17,15 +17,14 @@ drawGraph <- function(data, miny, maxy) {
     geom_text(aes(label=round(uncertainty, 4)), position=position_dodge(width=0.9), vjust=-0.25) +
     coord_cartesian(ylim=c(miny, maxy)) +
     theme(plot.title = element_text(size=10))
-  
 }
 ```
 
 ## calculate coefficient
 ```{r}
-coefficients_low <- calCoef(data_low, 3, 1000)
-coefficients_intermediate <- calCoef(data_intermediate, 3, 1000)
-coefficients_high <- calCoef(data_high, 3, 1000)
+coefficients_low <- calCoef(data_low, 3, 200)
+coefficients_intermediate <- calCoef(data_intermediate, 3, 200)
+coefficients_high <- calCoef(data_high, 3, 200)
 ```
 
 
@@ -88,37 +87,78 @@ meanUncertainty <- function(data, recData, cals){
 }
 ```
 
-```{r}
+
+
+```{r, fig.align = 'center', fig.width = 10, fig.height=12}
 set.seed(3)
 D47 <- 0.6
 D47error <-0.05
 recData <- data.frame(D47 = D47,
                       D47error = D47error)
 
-```
-
-
-```{r}
 uncer_low <- meanUncertainty(data_low, recData, coefficients_low)
 
 uncer_intermediate <- meanUncertainty(data_intermediate, recData, coefficients_intermediate)
 
 uncer_high <- meanUncertainty(data_high, recData, coefficients_high)
+
+low <- drawGraph(data.frame(uncer_low), min(data.frame(uncer_low)$uncertainty), max(data.frame(uncer_low)$uncertainty))
+
+intermediate <- drawGraph(data.frame(uncer_intermediate), min(data.frame(uncer_intermediate)$uncertainty), max(data.frame(uncer_intermediate)$uncertainty))
+
+high <- drawGraph(data.frame(uncer_high), min(data.frame(uncer_high)$uncertainty), max(data.frame(uncer_high)$uncertainty))
+
+low / intermediate / high
 ```
 
-```{r, fig.align = 'center', fig.width = 10}
-drawGraph(data.frame(uncer_low), min(data.frame(uncer_low)$uncertainty), max(data.frame(uncer_low)$uncertainty))
+```{r, fig.align = 'center', fig.width = 10, fig.height=12}
+set.seed(3)
+D47 <- 0.7
+D47error <-0.05
+recData <- data.frame(D47 = D47,
+                      D47error = D47error)
+
+uncer_low <- meanUncertainty(data_low, recData, coefficients_low)
+
+uncer_intermediate <- meanUncertainty(data_intermediate, recData, coefficients_intermediate)
+
+uncer_high <- meanUncertainty(data_high, recData, coefficients_high)
+
+
+low <- drawGraph(data.frame(uncer_low), min(data.frame(uncer_low)$uncertainty), max(data.frame(uncer_low)$uncertainty))
+
+intermediate <- drawGraph(data.frame(uncer_intermediate), min(data.frame(uncer_intermediate)$uncertainty), max(data.frame(uncer_intermediate)$uncertainty))
+
+high <- drawGraph(data.frame(uncer_high), min(data.frame(uncer_high)$uncertainty), max(data.frame(uncer_high)$uncertainty))
+
+low / intermediate / high
 ```
 
-```{r, fig.align = 'center', fig.width = 10}
 
-drawGraph(data.frame(uncer_intermediate), min(data.frame(uncer_intermediate)$uncertainty), max(data.frame(uncer_intermediate)$uncertainty))
+```{r, fig.align = 'center', fig.width = 10, fig.height=12}
+set.seed(3)
+D47 <- 0.8
+D47error <-0.05
+recData <- data.frame(D47 = D47,
+                      D47error = D47error)
+
+uncer_low <- meanUncertainty(data_low, recData, coefficients_low)
+
+uncer_intermediate <- meanUncertainty(data_intermediate, recData, coefficients_intermediate)
+
+uncer_high <- meanUncertainty(data_high, recData, coefficients_high)
+
+
+low <- drawGraph(data.frame(uncer_low), min(data.frame(uncer_low)$uncertainty), max(data.frame(uncer_low)$uncertainty))
+
+intermediate <- drawGraph(data.frame(uncer_intermediate), min(data.frame(uncer_intermediate)$uncertainty), max(data.frame(uncer_intermediate)$uncertainty))
+
+high <- drawGraph(data.frame(uncer_high), min(data.frame(uncer_high)$uncertainty), max(data.frame(uncer_high)$uncertainty))
+
+low / intermediate / high
 ```
 
-```{r, fig.align = 'center', fig.width = 10}
 
-drawGraph(data.frame(uncer_high), min(data.frame(uncer_high)$uncertainty), max(data.frame(uncer_high)$uncertainty))
-```
 
 
 

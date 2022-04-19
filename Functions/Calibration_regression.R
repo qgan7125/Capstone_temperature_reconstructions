@@ -29,14 +29,20 @@ OLS_boot <- function(formula, data, indices){
 
 york_boot <- function(formula, data, indices){
   d <- data[indices, ]
-  york_data <- cbind(d$Temperature, d$TempError, d$D47, d$D47error)
+  d$x_SE <- abs(d$TempError)/sqrt(nrow(d))
+  d$y_SE <- abs(d$D47error)/sqrt(nrow(d))
+  york_data <- cbind.data.frame(d$Temperature, 1/d$x_SE^2, d$D47, 1/d$y_SE^2)
   fit_model <- york(york_data)
   return (c(fit_model$a['a'], fit_model$b['b']))
 }
 
 deming_boot <- function(formula, data, indices){
   d <- data[indices, ]
-  fit_model <- deming(formula, data=d, xstd=abs(TempError), ystd=abs(D47error)) 
+  d$x_SE <- abs(d$TempError)/sqrt(nrow(d))
+  d$y_SE <- abs(d$D47error)/sqrt(nrow(d))
+  fit_model <- deming(formula, data=d, 
+                      xstd=1/x_SE^2, 
+                      ystd=1/y_SE^2)
   return (c(fit_model$coefficients[1], fit_model$coefficients[2]))
 }
 
@@ -67,7 +73,7 @@ TS_boot <- function(formula, data, indices){
 LSMC_fit <- function(data, seed){
   set.seed(seed)
   N <- nrow(data)           #Sample Size
-  M <- 1000                 #Number of experiments/iterations
+  M <- nrow(data)           #Number of experiments/iterations
   
   ## Storage
   intercept_DT <- rep(0, M)
@@ -75,7 +81,6 @@ LSMC_fit <- function(data, seed){
   
   ## begin Monte Carlo
   for (i in 1:M) {
-    U_i = rnorm(N, 0, sqrt(abs(data$D47error)))
     x_i = rnorm(N, data$x_TRUE, sqrt(abs(data$TempError)))
     # Y_i = alpha_TRUE + beta_TRUE * x_i + U_i
     Y_i = rnorm(N, data$y_TRUE, sqrt(abs(data$D47error)))

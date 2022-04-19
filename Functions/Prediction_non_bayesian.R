@@ -2,9 +2,8 @@
 #' multiple replicates of the same target.
 #' 
 #' @param targety independent measurements of D47
-#' @param calData Calibration data with the following columns: D47, T2, 
+#' @param calData Calibration data with the following columns: D47, Temperature, 
 #'                TempError, D47error
-#' @param model string: lm, wlm, Deming, York
 #' 
 predictTc <- function(calData, 
                        targety, 

@@ -24,89 +24,32 @@ data_intermediate <- read_csv("Dataset_S2_Mar8.csv")
 data_high <- read_csv("Dataset_S3_Mar8.csv")
 ```
 
-
-## Temperature Error distribution
 ```{r}
-Temp_low_distribution <- data_low %>% 
-  ggplot(aes(x= TempError)) + 
-  geom_histogram(aes(y=..density..),
-                colour="black", 
-                fill="white")+
-  geom_density() +
-  xlab("Measurement Error") + 
-  ylab("Density") + 
-  labs(title = "Low Error Data") +
-  theme(plot.title = element_text(size=10))
+data_low['ErrorLevel'] <- rep("Low", nrow(data_low))
+data_intermediate['ErrorLevel'] <- rep("Intermediate", nrow(data_intermediate))
+data_high['ErrorLevel'] <- rep("High", nrow(data_high))
 
-Temp_intermediate_distribution <- data_intermediate %>% 
-  ggplot(aes(x= TempError)) + 
-  geom_histogram(aes(y=..density..),
-                colour="black", 
-                fill="white")+
-  geom_density() +
-  xlab("Measurement Error") + 
-  ylab("Density") +
-  labs(title = "Intermediate Error Data") +
-  theme(plot.title = element_text(size=10))
+rbind(data_low[c('ErrorLevel', 'TempError')], data_intermediate[c('ErrorLevel', 'TempError')], data_high[c('ErrorLevel', 'TempError')]) %>% 
+  ggplot(aes(y = TempError, x = ErrorLevel))+
+  geom_boxplot() + 
+  ylim(c(-0.2, 0.2)) + 
+  labs(title = "The temperature error from the three data sets after March 8th")
 
-Temp_high_distribution <- data_high %>% 
-  ggplot(aes(x= TempError)) + 
-  geom_histogram(aes(y=..density..),
-                colour="black", 
-                fill="white")+
-  geom_density() +
-  xlab("Measurement Error") + 
-  ylab("Density") + 
-  labs(title = "High Error Data") +
-  theme(plot.title = element_text(size=10))
 
-TempError_distribution <- Temp_low_distribution / Temp_intermediate_distribution / Temp_high_distribution +
-  plot_annotation(title = bquote(10^6/T^2~"Measurement Error"),
-                  caption = bquote(10^6/T^2~"Measurement Error distributons across different data sets"))
+```
 
-TempError_distribution
+```{r}
+
+rbind(data_low[c('ErrorLevel', 'D47error')], data_intermediate[c('ErrorLevel', 'D47error')], data_high[c('ErrorLevel', 'D47error')]) %>% 
+  ggplot(aes(y = D47error, x = ErrorLevel))+
+  geom_boxplot() + 
+  ylim(c(-0.05, 0.05)) + 
+  labs(title = "The D47 error from the three data sets after March 8th")
 ```
 
 
-## D47 Error distribution
-```{r}
-D47_low_distribution <- data_low %>% 
-  ggplot(aes(x= y_TRUE - D47)) + 
-  geom_histogram(aes(y=..density..),
-                colour="black", 
-                fill="white")+
-  geom_density() +
-  xlab("Measurement Error") + 
-  ylab("Density") + 
-  labs(title = "Low Error Data") +
-  theme(plot.title = element_text(size=10))
 
-D47_intermediate_distribution <- data_intermediate %>% 
-  ggplot(aes(x= y_TRUE - D47)) + 
-  geom_histogram(aes(y=..density..),
-                colour="black", 
-                fill="white")+
-  geom_density() +
-  xlab("Measurement Error") + 
-  ylab("Density") + 
-  labs(title = "Intermediate Error Data") +
-  theme(plot.title = element_text(size=10))
 
-D47_high_distribution <- data_high %>% 
-  ggplot(aes(x= y_TRUE - D47)) + 
-  geom_histogram(aes(y=..density..),
-                colour="black", 
-                fill="white")+
-  geom_density() +
-  xlab("Measurement Error") + 
-  ylab("Density") + 
-  labs(title = "High Error Data") +
-  theme(plot.title = element_text(size=10))
 
-D47Error_distribution <- D47_low_distribution / D47_intermediate_distribution / D47_high_distribution +
-    plot_annotation(title = bquote(D47~"Measurement Error"),
-                  caption = bquote(D47~"Measurement Error distributons across different data sets"))
 
-D47Error_distribution
-```
 
