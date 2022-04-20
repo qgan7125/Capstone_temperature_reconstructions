@@ -1,0 +1,207 @@
+---
+title: "TR_prediction"
+author: "Quan Gan"
+date: "4/19/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+source("Global.R")
+source("./Functions/Prediction_non_bayesian.R")
+```
+
+## helper functions for new models
+```{r}
+simulateODR_measured <- function(data, 
+                                   replicates, 
+                                   samples = NULL, 
+                                   D47error = "D47error"){
+  do.call(rbind,lapply(1:replicates, function(x){
+    dataSub <- data[sample(seq_along(data[,1]), if(is.null(samples)){nrow(data)}else{samples}, replace = T),]
+    Reg <- odregress(dataSub$Temperature, dataSub$D47)
+    cbind.data.frame("alpha"=Reg$coeff[2],"beta"=Reg$coeff[1])
+  }))
+}
+
+simulateQR_measured <- function(data, 
+                                   replicates, 
+                                   samples = NULL, 
+                                   D47error = "D47error"){
+  do.call(rbind,lapply(1:replicates, function(x){
+    dataSub <- data[sample(seq_along(data[,1]), if(is.null(samples)){nrow(data)}else{samples}, replace = T),]
+    Reg <- rq(D47 ~ Temperature, data = dataSub)
+    cbind.data.frame("alpha"=Reg$coeff[1],"beta"=Reg$coeff[2])
+  }))
+}
+
+simulateRLM_measured <- function(data, 
+                                   replicates, 
+                                   samples = NULL, 
+                                   D47error = "D47error"){
+  do.call(rbind,lapply(1:replicates, function(x){
+    dataSub <- data[sample(seq_along(data[,1]), if(is.null(samples)){nrow(data)}else{samples}, replace = T),]
+    Reg <- rlm(D47 ~ Temperature, data = dataSub)
+    cbind.data.frame("alpha"=Reg$coeff[1],"beta"=Reg$coeff[2])
+  }))
+}
+
+simulateTS_measured <- function(data, 
+                                   replicates, 
+                                   samples = NULL, 
+                                   D47error = "D47error"){
+  do.call(rbind,lapply(1:replicates, function(x){
+    dataSub <- data[sample(seq_along(data[,1]), if(is.null(samples)){nrow(data)}else{samples}, replace = T),]
+    Reg <- theilsen(D47 ~ Temperature, data = dataSub)
+    cbind.data.frame("alpha"=Reg$coeff[1],"beta"=Reg$coeff[2])
+  }))
+}
+
+simulateLSMC_measured <- function(data, 
+                                   replicates, 
+                                   samples = NULL, 
+                                   D47error = "D47error"){
+  do.call(rbind,lapply(1:replicates, function(x){
+    dataSub <- data.frame(rep(0, nrow(data)))
+    dataSub$Temperature <- rnorm(if(is.null(samples)){nrow(data)}else{samples}, 
+                                data$x_TRUE,
+                                sd(data$TempError))
+    dataSub$D47 <- rnorm(if(is.null(samples)){nrow(data)}else{samples}, 
+                            data$y_TRUE,
+                            sd(data$D47error))
+    Reg <- lm(D47 ~ Temperature, data = dataSub)
+    cbind.data.frame("alpha"=Reg$coeff[1],"beta"=Reg$coeff[2])
+  }))
+}
+
+```
+
+## get the model coefficient
+```{r}
+getCals <- function(data, 
+                    replicates, 
+                    samples = NULL, 
+                    D47error = "D47error", 
+                    n.iter = 5000, 
+                    priors = "Informative"){
+  
+  LMcals <<- simulateLM_measured(data, replicates = replicates, samples = samples, D47error = D47error)
+  yorkcals <<- simulateYork_measured(data, replicates = replicates, samples = samples, D47error = D47error)
+  demingcals <<- simulateDeming(data, replicates = replicates, samples = samples, D47error = D47error)
+  bayeslincals <<- fitClumpedRegressions(data, n.iter = n.iter, priors = priors, samples = samples, D47error = D47error)
+  LSMCcals <<- simulateLSMC_measured(data, replicates = replicates, samples = samples, D47error = D47error)
+  ODRcals <<- simulateODR_measured(data, replicates = replicates, samples = samples, D47error = D47error)
+  QRcals <<- simulateQR_measured(data, replicates = replicates, samples = samples, D47error = D47error)
+  RLMcals <<- simulateRLM_measured(data, replicates = replicates, samples = samples, D47error = D47error)
+  TScals <<- simulateTS_measured(data, replicates = replicates, samples = samples, D47error = D47error)
+  
+  list(LMcals = LMcals,
+       yorkcals = yorkcals,
+       demingcals = demingcals,
+       bayeslincals = bayeslincals,
+       LSMCcals = LSMCcals,
+       ODRcals = ODRcals,
+       QRcals = QRcals,
+       RLMcals = RLMcals,
+       TScals = TScals
+       )
+}
+```
+
+## Coefficient
+```{r}
+lowCoef <<- getCals(data_low, 1000)
+intermediateCoef <<- getCals(data_intermediate, 1000)
+highCoef <<- getCals(data_high, 1000)
+```
+
+##reconstruction
+```{r}
+calRec <- function(calData, recData, cals){
+
+  do.call(rbind,lapply(1:nrow(recData), function(x){
+                a <- predictTc(calData, targety=recData$D47[x], obCal=cals)
+                b <- predictTc(calData, targety=recData$D47[x]+recData$D47error[x], obCal=cals)
+                cbind.data.frame("D47"=recData$D47[x],"D47se"=recData$D47error[x], "Tc"=a$temp, "se"=a$temp-b$temp)
+                }))
+}
+
+AllRec <- function(data, recData, cals){
+  LMrc <- calRec(data, recData, cals$LMcals)
+  yorkrc <- calRec(data, recData, cals$yorkcals)
+  demingrc <- calRec(data, recData, cals$demingcals)
+  BLM1calsMatrix <- cals$bayeslincals$BLM1_fit$BUGSoutput$sims.matrix
+  BLM1cal <- cbind.data.frame(alpha = BLM1cals[,1],
+                              beta = BLM1cals[,2])
+  BLM_norc <-calRec(data, recData, BLM1cal)
+  BLMrc <- BayesianPredictions(cals$bayeslincals, recData$D47, abs(recData$D47error), 1)
+  names(BLMrc) <- c("D47", "D47se", "Tc", "se")
+  LSMCrc <-calRec(data, recData, cals$LSMCcals)
+  ODRrc <-calRec(data, recData, cals$ODRcals)
+  QRrc <-calRec(data, recData, cals$QRcals)
+  RLMrc <-calRec(data, recData, cals$RLMcals)
+  TSrc <-calRec(data, recData, cals$TScals)
+  
+  rbind.data.frame(LMrc,
+                   yorkrc,
+                   demingrc,
+                   BLM_norc,
+                   BLMrc,
+                   LSMCrc,
+                   ODRrc,
+                   QRrc,
+                   RLMrc,
+                   TSrc)
+}
+
+drawGraph <- function(data, miny, maxy) {
+    ggplot(data, aes(x = name, y = se, fill = name)) +
+    geom_col() +
+    geom_text(aes(label=round(se, 4)), position=position_dodge(width=0.9), vjust=-0.25) +
+    coord_cartesian(ylim=c(miny, maxy)) +
+    theme(plot.title = element_text(size=10))
+}
+
+names = c("OLS",
+          "york",
+          "deming",
+          "nonbayesian",
+          "bayesian",
+          "LSMC",
+          "ODR",
+          "QR",
+          "RLM",
+          "TS")
+
+```
+
+
+
+
+```{r, fig.align='center', fig.width=10, fig.height=11}
+D47 <- 0.6
+D47error <-0.02
+recData <- data.frame(D47 = D47,
+                      D47error = D47error)
+
+data_low$T2 <- data_low$Temperature
+lowResult <- AllRec(data_low, recData, lowCoef)
+lowResult$name = names
+lowgraph <- drawGraph(lowResult, min(lowResult$se), max(lowResult$se))
+
+data_intermediate$T2 <- data_intermediate$Temperature
+intermediateResult <- AllRec(data_intermediate, recData, intermediateCoef)
+intermediateResult$name = names
+intermediategraph <- drawGraph(intermediateResult, min(intermediateResult$se), max(intermediateResult$se))
+
+data_high$T2 <- data_high$Temperature
+highResult <- AllRec(data_high, recData, highCoef)
+highResult$name = names
+highgraph <- drawGraph(highResult, min(highResult$se), max(highResult$se))
+
+lowgraph / intermediategraph / highgraph
+```
+
+
+
+

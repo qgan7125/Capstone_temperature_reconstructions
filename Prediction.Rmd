@@ -92,7 +92,7 @@ meanUncertainty <- function(data, recData, cals){
 ```{r, fig.align = 'center', fig.width = 10, fig.height=12}
 set.seed(3)
 D47 <- 0.6
-D47error <-0.05
+D47error <-0.01
 recData <- data.frame(D47 = D47,
                       D47error = D47error)
 

@@ -20,8 +20,8 @@ library(patchwork)
 There are three data sets with low, intermediate, and high errors.
 ```{r}
 data_low <- read_csv("Dataset_S1_Mar8.csv")
-data_intermediate <- read_csv("Dataset_S2_Mar8.csv")
-data_high <- read_csv("Dataset_S3_Mar8.csv")
+data_intermediate <- read_csv("Dataset_S2_Apr20_V2.csv")
+data_high <- read_csv("Dataset_S3_Apr20_V2.csv")
 ```
 
 ```{r}
@@ -32,8 +32,8 @@ data_high['ErrorLevel'] <- rep("High", nrow(data_high))
 rbind(data_low[c('ErrorLevel', 'TempError')], data_intermediate[c('ErrorLevel', 'TempError')], data_high[c('ErrorLevel', 'TempError')]) %>% 
   ggplot(aes(y = TempError, x = ErrorLevel))+
   geom_boxplot() + 
-  ylim(c(-0.2, 0.2)) + 
-  labs(title = "The temperature error from the three data sets after March 8th")
+  # ylim(c(-0.2, 0.2)) + 
+  labs(title = "The temperature error")
 
 
 ```
@@ -44,7 +44,7 @@ rbind(data_low[c('ErrorLevel', 'D47error')], data_intermediate[c('ErrorLevel', '
   ggplot(aes(y = D47error, x = ErrorLevel))+
   geom_boxplot() + 
   ylim(c(-0.05, 0.05)) + 
-  labs(title = "The D47 error from the three data sets after March 8th")
+  labs(title = "The D47 error")
 ```
 
 

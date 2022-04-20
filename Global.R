@@ -4,7 +4,6 @@ library(ggplot2)
 library(boot)
 library(knitr)
 library(data.table)
-library(Rmisc)
 library(R2jags)
 library(patchwork)
 library(investr)
@@ -14,11 +13,17 @@ library(rstan)
 library(pracma)
 library(MASS)
 library(quantreg)
+library(gmodels)
+library(greekLetters)
 
 # load data in
 data_low <- read.csv("./Data/Dataset_S1_Mar8.csv")
-data_intermediate <- read.csv("./Data/Dataset_S2_Mar8.csv")
-data_high <- read.csv("./Data/Dataset_S3_Mar8.csv")
+data_intermediate <- read.csv("./Data/Dataset_S2_Apr20_V2.csv")
+data_high <- read.csv("./Data/Dataset_S3_Apr20_V2.csv")
 
-# load necessary functions
-sapply(list.files("Functions", full.names = T), source)
+
+# functions from BayClump
+function_url = c("https://raw.githubusercontent.com/Tripati-Lab/BayClump/main/Functions/Predictions_Bayesian.R",
+                 "https://raw.githubusercontent.com/Tripati-Lab/BayClump/main/Functions/Predictions_nonBayesian.R",
+                 "https://raw.githubusercontent.com/Tripati-Lab/BayClump/main/Functions/Calibration_BayesianNonBayesian.R")
+sapply(function_url, source)
