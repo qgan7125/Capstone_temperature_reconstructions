@@ -15,11 +15,11 @@ source("Global.R")
 ## load data in
 We only need 50 points for comparison.
 ```{r}
-set.seed(3)
+set.seed(123)
 mark <- sample(nrow(data_intermediate), 50, replace = FALSE)
 data_50 <- data_intermediate[mark, ]
 
-lowCoef <<- getCals(data_50, 100)
+lowCoef <<- getCals(data_50, 1000)
 
 ```
 
@@ -28,22 +28,23 @@ lowCoef <<- getCals(data_50, 100)
 ```{r}
 
 # create data visualization
-createPlot <- function(data, result, title, caption, model) {
-  plot_object <- data %>% 
-    ggplot(aes(x = x_TRUE, y=y_TRUE)) + 
-    geom_point(alpha= 0.5) +
-    geom_ribbon(aes(ymin = result$ci_lower_est, 
-                    ymax = result$ci_upper_est), 
-                    fill = "orange") +
-    geom_ribbon(aes(ymin = (x_TRUE + min(TempError)) * 0.0369 + 0.268 + min(D47error) , 
-                    ymax = (x_TRUE + max(TempError)) * 0.0369 + 0.268 + max(D47error)), 
-                    fill = "white", alpha =  .9) +
-    # annotate("text", 
-    #          x = 17.5, 
-    #          y = 0.5, 
-    #          hjust = 1,
-    #          label = paste(greeks("beta"), "=",round(result$beta[1], 4), "( 95% CI", round(result$beta[2], 4),"-", round(result$beta[3],4), ")\n", 
-    #                       greeks("alpha"), "=", round(result$alpha[1], 4), "( 95% CI", round(result$alpha[2], 4),"-", round(result$alpha[3],4), ")")) +
+createPlot <- function(data, result, cals, title, caption, model) {
+  ggplot(aes(x = x, y=median_est), data = result) + 
+  geom_ribbon(aes(ymin = ci_lower_est,
+                  ymax = ci_upper_est),
+                  fill = "orange", alpha =  .9) +
+  geom_point(data = data, aes(x = x_TRUE, y = y_TRUE)) + 
+  geom_ribbon(data = data, aes(x = x_TRUE,
+                                  y = y_TRUE,
+                                ymin = (x_TRUE + min(TempError)) * 0.0369 + 0.268 + max(D47error),
+                                ymax = (x_TRUE + max(TempError)) * 0.0369 + 0.268 + min(D47error)),
+                                fill = "white", alpha =  .9) + 
+    annotate("text",
+             x = 18.5,
+             y = 0.55,
+             hjust = 1,
+             label = paste(greeks("beta"), "=",round(cals$beta[1], 4), "( 95% CI", round(cals$beta[2], 4),"-", round(cals$beta[3],4), ")\n",
+                          greeks("alpha"), "=", round(cals$alpha[1], 4), "( 95% CI", round(cals$alpha[2], 4),"-", round(cals$alpha[3],4), ")")) +
     annotate("text",
              x = 5,
              y = 0.9,
@@ -53,7 +54,6 @@ createPlot <- function(data, result, title, caption, model) {
          caption = caption)+ 
     xlab(expression(paste("True Temperature ", "10"^6, "/T"^2 ," in ", ""^"o", "K"))) + 
     ylab(expression(paste("True D47 (", ""^"o", "/"["oo"], ")"))) 
-  return(plot_object)
 }
 
 ```
@@ -63,7 +63,8 @@ createPlot <- function(data, result, title, caption, model) {
 OLScals <- list(alpha = ci(lowCoef$LMcals$alpha),
                 beta = ci(lowCoef$LMcals$beta))
 OLS_plot <- createPlot(data_50, 
-           RegressionSingleCI(OLScals, min(data_50), max(data_50)), 
+           as.data.frame(RegressionSingleCI(lowCoef$LMcals, min(data_50$x_TRUE), max(data_50$x_TRUE), length.out = 50)),
+           OLScals,
            "", 
            "",
            bquote(paste(bold("A. "), "Ordinary least squares")))
@@ -77,7 +78,8 @@ OLS_plot
 yorkcals <- list(alpha = ci(lowCoef$yorkcals$alpha),
                 beta = ci(lowCoef$yorkcals$beta))
 york_plot <- createPlot(data_50, 
-           yorkcals, 
+           as.data.frame(RegressionSingleCI(lowCoef$yorkcals, min(data_50$x_TRUE), max(data_50$x_TRUE), length.out = 50)),
+           yorkcals,
            "", 
            "",
            bquote(paste(bold("B. "), "York Regression")))
@@ -90,7 +92,8 @@ york_plot
 demingcals <- list(alpha = ci(lowCoef$demingcals$alpha, 0.95),
                 beta = ci(lowCoef$demingcals$beta))
 deming_plot <- createPlot(data_50, 
-           demingcals, 
+           as.data.frame(RegressionSingleCI(lowCoef$demingcals, min(data_50$x_TRUE), max(data_50$x_TRUE), length.out = 50)),
+           demingcals,
            "", 
            "",
            bquote(paste(bold("C. "), "Deming Regression")))
@@ -105,7 +108,8 @@ Bayesiancals <- list(alpha = lowCoef$bayeslincals$BLM1_fit$BUGSoutput$summary[1,
 
 
 Bayesian_plot <- createPlot(data_50, 
-           Bayesiancals, 
+           as.data.frame(RegressionSingleCI(lowCoef$bayeslincals$BLM1_fit$BUGSoutput$sims.matrix, min(data_50$x_TRUE), max(data_50$x_TRUE), length.out = 50)),
+           Bayesiancals,
            "", 
            "",
            bquote(paste(bold("D. "), "Bayesian Regression")))
@@ -119,7 +123,8 @@ Bayesian_plot
  ODRcals <- list(alpha = ci(lowCoef$ODRcals$alpha, 0.95),
                 beta = ci(lowCoef$ODRcals$beta))
  ODR_plot <- createPlot(data_50, 
-            ODRcals, 
+           as.data.frame(RegressionSingleCI(lowCoef$ODRcals, min(data_50$x_TRUE), max(data_50$x_TRUE), length.out = 50)),
+           ODRcals,
            "", 
            "",
            bquote(paste(bold("E. "), "Orthogonal Distance Regression")))
@@ -132,7 +137,8 @@ Bayesian_plot
  LSMCcals <- list(alpha = ci(lowCoef$LSMCcals$alpha, 0.95),
                 beta = ci(lowCoef$LSMCcals$beta))
 LSMC_plot <- createPlot(data_50, 
-            LSMCcals, 
+           as.data.frame(RegressionSingleCI(lowCoef$LSMCcals, min(data_50$x_TRUE), max(data_50$x_TRUE), length.out = 50)),
+           LSMCcals,
            "", 
            "",
            bquote(paste(bold("F. "), "Least square monte carlo")))
@@ -145,7 +151,8 @@ LSMC_plot
 QRcals <- list(alpha = ci(lowCoef$QRcals$alpha, 0.95),
                 beta = ci(lowCoef$QRcals$beta))
 QR_plot <- createPlot(data_50, 
-            QRcals, 
+           as.data.frame(RegressionSingleCI(lowCoef$QRcals, min(data_50$x_TRUE), max(data_50$x_TRUE), length.out = 50)),
+           QRcals,
            "", 
            "",
            bquote(paste(bold("G. "), "Quantile Regression")))
@@ -158,7 +165,8 @@ QR_plot
 RLMcals <- list(alpha = ci(lowCoef$RLMcals$alpha, 0.95),
                 beta = ci(lowCoef$RLMcals$beta))
 RLM_plot <- createPlot(data_50, 
-            QRcals, 
+           as.data.frame(RegressionSingleCI(lowCoef$RLMcals, min(data_50$x_TRUE), max(data_50$x_TRUE), length.out = 50)),
+           RLMcals,
            "", 
            "",
            bquote(paste(bold("H. "), "Robust regression")))
@@ -171,7 +179,8 @@ RLM_plot
 TScals <- list(alpha = ci(lowCoef$TScals$alpha, 0.95),
                 beta = ci(lowCoef$TScals$beta))
 TS_plot <- createPlot(data_50, 
-            TScals, 
+           as.data.frame(RegressionSingleCI(lowCoef$TScals, min(data_50$x_TRUE), max(data_50$x_TRUE), length.out = 50)),
+           TScals,
            "", 
            "",
            bquote(paste(bold("H. "), "Theil-sen regression")))
@@ -180,7 +189,7 @@ TS_plot
 ```
 
 ## Merge all plots
-```{r fig.align="center", echo = FALSE, fig.width = 12, fig.height= 16}
+```{r fig.align="center", echo = FALSE, fig.width = 12, fig.height= 18}
 (OLS_plot | york_plot) /
 (deming_plot | Bayesian_plot) /
 (ODR_plot | LSMC_plot) /

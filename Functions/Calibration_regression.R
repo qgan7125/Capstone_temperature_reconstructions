@@ -1,132 +1,89 @@
-calCoef <- function(data, seed, replicate){
-  OLS_result <- fit_model(seed, OLS_boot, data, D47~Temperature, replicate)
-  york_result <- fit_model(seed, york_boot, data, D47~Temperature, replicate)
-  deming_result <- fit_model(seed, deming_boot, data, D47~Temperature, replicate)
-  bayesian_resule <- Bayesian_fit(data, seed)
-  LSMC_result <- LSMC_fit(data, seed)
-  ODR_result <- fit_model(seed, ODR_boot, data, D47~Temperature, replicate)
-  QR_result <- fit_model(seed, QR_boot, data, D47~Temperature, replicate)
-  rlm_result <- fit_model(seed, rlm_boot, data, D47~Temperature, replicate)
-  TS_result <- fit_model(seed, TS_boot, data, D47~Temperature, replicate)
+simulateODR_measured <- function(data, 
+                                 replicates, 
+                                 samples = NULL, 
+                                 D47error = "D47error"){
+  do.call(rbind,lapply(1:replicates, function(x){
+    dataSub <- data[sample(seq_along(data[,1]), if(is.null(samples)){nrow(data)}else{samples}, replace = T),]
+    Reg <- odregress(dataSub$Temperature, dataSub$D47)
+    cbind.data.frame("alpha"=Reg$coeff[2],"beta"=Reg$coeff[1])
+  }))
+}
+
+simulateQR_measured <- function(data, 
+                                replicates, 
+                                samples = NULL, 
+                                D47error = "D47error"){
+  do.call(rbind,lapply(1:replicates, function(x){
+    dataSub <- data[sample(seq_along(data[,1]), if(is.null(samples)){nrow(data)}else{samples}, replace = T),]
+    Reg <- rq(D47 ~ Temperature, data = dataSub)
+    cbind.data.frame("alpha"=Reg$coeff[1],"beta"=Reg$coeff[2])
+  }))
+}
+
+simulateRLM_measured <- function(data, 
+                                 replicates, 
+                                 samples = NULL, 
+                                 D47error = "D47error"){
+  do.call(rbind,lapply(1:replicates, function(x){
+    dataSub <- data[sample(seq_along(data[,1]), if(is.null(samples)){nrow(data)}else{samples}, replace = T),]
+    Reg <- rlm(D47 ~ Temperature, data = dataSub)
+    cbind.data.frame("alpha"=Reg$coeff[1],"beta"=Reg$coeff[2])
+  }))
+}
+
+simulateTS_measured <- function(data, 
+                                replicates, 
+                                samples = NULL, 
+                                D47error = "D47error"){
+  do.call(rbind,lapply(1:replicates, function(x){
+    dataSub <- data[sample(seq_along(data[,1]), if(is.null(samples)){nrow(data)}else{samples}, replace = T),]
+    Reg <- theilsen(D47 ~ Temperature, data = dataSub)
+    cbind.data.frame("alpha"=Reg$coeff[1],"beta"=Reg$coeff[2])
+  }))
+}
+
+simulateLSMC_measured <- function(data, 
+                                  replicates, 
+                                  samples = NULL, 
+                                  D47error = "D47error"){
+  do.call(rbind,lapply(1:replicates, function(x){
+    dataSub <- data.frame(rep(0, nrow(data)))
+    dataSub$Temperature <- rnorm(if(is.null(samples)){nrow(data)}else{samples}, 
+                                 data$x_TRUE,
+                                 sd(data$TempError))
+    dataSub$D47 <- rnorm(if(is.null(samples)){nrow(data)}else{samples}, 
+                         data$y_TRUE,
+                         sd(data$D47error))
+    Reg <- lm(D47 ~ Temperature, data = dataSub)
+    cbind.data.frame("alpha"=Reg$coeff[1],"beta"=Reg$coeff[2])
+  }))
+}
+
+getCals <- function(data, 
+                    replicates, 
+                    samples = NULL, 
+                    D47error = "D47error", 
+                    n.iter = 5000, 
+                    priors = "Informative"){
   
-  return(list(OLS = OLS_result, 
-              york = york_result, 
-              deming = deming_result,
-              bayesian = bayesian_resule, 
-              LSMC = LSMC_result, 
-              ODR = ODR_result, 
-              QR = QR_result, 
-              RLM = rlm_result, 
-              TS = TS_result))
-}
-
-# helper functions
-OLS_boot <- function(formula, data, indices){
-  d <- data[indices, ]
-  OLS <- lm(formula, d)
-  return (c(coef(OLS)))
-}
-
-york_boot <- function(formula, data, indices){
-  d <- data[indices, ]
-  d$x_SE <- abs(d$TempError)/sqrt(nrow(d))
-  d$y_SE <- abs(d$D47error)/sqrt(nrow(d))
-  york_data <- cbind.data.frame(d$Temperature, 1/d$x_SE^2, d$D47, 1/d$y_SE^2)
-  fit_model <- york(york_data)
-  return (c(fit_model$a['a'], fit_model$b['b']))
-}
-
-deming_boot <- function(formula, data, indices){
-  d <- data[indices, ]
-  d$x_SE <- abs(d$TempError)/sqrt(nrow(d))
-  d$y_SE <- abs(d$D47error)/sqrt(nrow(d))
-  fit_model <- deming(formula, data=d, 
-                      xstd=1/x_SE^2, 
-                      ystd=1/y_SE^2)
-  return (c(fit_model$coefficients[1], fit_model$coefficients[2]))
-}
-
-ODR_boot <- function(formula, data, indices){
-  d <- data[indices, ]
-  fit_model <- odregress(d$Temperature, d$D47)
-  return (c(fit_model$coef[2], fit_model$coef[1]))
-}
-
-QR_boot <- function(formula, data, indices){
-  d <- data[indices, ]
-  fit_model <- rq(formula, data=d)
-  return (c(coef(fit_model)))
-}
-
-rlm_boot <- function(formula, data, indices){
-  d <- data[indices, ]
-  fit_model <- rlm(formula, data=d)
-  return (c(coef(fit_model)))
-}
-
-TS_boot <- function(formula, data, indices){
-  d <- data[indices, ]
-  fit_model <- theilsen(formula, data=d)
-  return (c(coef(fit_model)))
-}
-
-LSMC_fit <- function(data, seed){
-  set.seed(seed)
-  N <- nrow(data)           #Sample Size
-  M <- nrow(data)           #Number of experiments/iterations
+  LMcals <<- simulateLM_measured(data, replicates = replicates, samples = samples, D47error = D47error)
+  yorkcals <<- simulateYork_measured(data, replicates = replicates, samples = samples, D47error = D47error)
+  demingcals <<- simulateDeming(data, replicates = replicates, samples = samples, D47error = D47error)
+  bayeslincals <<- fitClumpedRegressions(data, n.iter = n.iter, priors = priors, samples = samples, D47error = D47error)
+  LSMCcals <<- simulateLSMC_measured(data, replicates = replicates, samples = samples, D47error = D47error)
+  ODRcals <<- simulateODR_measured(data, replicates = replicates, samples = samples, D47error = D47error)
+  QRcals <<- simulateQR_measured(data, replicates = replicates, samples = samples, D47error = D47error)
+  RLMcals <<- simulateRLM_measured(data, replicates = replicates, samples = samples, D47error = D47error)
+  TScals <<- simulateTS_measured(data, replicates = replicates, samples = samples, D47error = D47error)
   
-  ## Storage
-  intercept_DT <- rep(0, M)
-  slope_DT <- rep(0, M)
-  
-  ## begin Monte Carlo
-  for (i in 1:M) {
-    x_i = rnorm(N, data$x_TRUE, sqrt(abs(data$TempError)))
-    # Y_i = alpha_TRUE + beta_TRUE * x_i + U_i
-    Y_i = rnorm(N, data$y_TRUE, sqrt(abs(data$D47error)))
-    
-    # Formulate data.table
-    data_i = data.table(Y = Y_i, X = x_i)
-    
-    # Run regressions
-    ols_i <- lm(data = data_i, Y ~ X)
-    
-    
-    # Extract coefficient and save
-    slope_DT[i] <- coef(ols_i)[2]
-    intercept_DT[i] <- coef(ols_i)[1]
-  }
-  
-  return (cbind.data.frame(alpha = intercept_DT, 
-                           beta = slope_DT))
-}
-
-Bayesian_fit <- function(data, seed){
-  rstan_options(auto_write = TRUE)
-  stan_date <- list(N = nrow(data), 
-                    Temperature = data$Temperature, 
-                    Temperature_true = data$x_TRUE,
-                    Temperature_error = abs(data$TempError),
-                    D47 = data$D47,
-                    D47_true = data$y_TRUE,
-                    D47_error = abs(data$D47error))
-  
-  Bayesian_model <- stan(file = "./Baseline_models/stan/Bayesian_linear_model_with_error.stan", data = stan_date, iter = 2000, chains = 4, seed = seed)
-  
-  Bayesian_result <- rstan::extract(Bayesian_model)
-  
-  return(cbind.data.frame(alpha = Bayesian_result$alpha, 
-                          beta = Bayesian_result$beta,
-                          tau = Bayesian_result$sigma))
-}
-
-fit_model <- function(seed, statistic, dataSet, formula, replicate){
-  set.seed(seed)
-  results <- boot(data = dataSet,
-                  statistic = statistic,
-                  R = replicate,
-                  formula = formula)
-  
-  return (cbind.data.frame(alpha = results$t[,1],
-                           beta = results$t[,2]))
+  list(LMcals = LMcals,
+       yorkcals = yorkcals,
+       demingcals = demingcals,
+       bayeslincals = bayeslincals,
+       LSMCcals = LSMCcals,
+       ODRcals = ODRcals,
+       QRcals = QRcals,
+       RLMcals = RLMcals,
+       TScals = TScals
+  )
 }

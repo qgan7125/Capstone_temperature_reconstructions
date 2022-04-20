@@ -1,6 +1,7 @@
 BayesianPredictions <- function(bayeslincals, 
                                 D47Pred,
-                                D47Prederror, 
+                                D47Prederror,
+                                materialsPred, 
                                 nsamp=500){
   
   
@@ -19,10 +20,11 @@ BayesianPredictions <- function(bayeslincals,
     mu2p[i] <- alpha  + beta * xp[i]
     unc[i] <- x2[i]-x2p[i]
     pred[i] ~ dnorm(x2[i], pow(unc[i],-2))
-    }
-  }")
+  }
   
-  postBLM<- bayeslincals
+}")
+  
+  postBLM<- bayeslincals$BLM1_fit$BUGSoutput$sims.matrix
   postPredBLM1 <- do.call(rbind,lapply(sample(1:nrow(postBLM), nsamp), function(j){
     tryCatch({
       LM_No_error_Data <- list(
@@ -37,7 +39,7 @@ BayesianPredictions <- function(bayeslincals,
       BLM1_fit_NoErrors <- jags(data = LM_No_error_Data,
                                 parameters = c("pred"),
                                 model = textConnection(BLM1), n.chains = 3,
-                                n.iter =  1000)
+                                n.iter =  2000)
       
       
       
@@ -49,8 +51,6 @@ BayesianPredictions <- function(bayeslincals,
       
     }, error=function(e){c(NA,NA)})
   }))
-  
   postPredBLM1 <-aggregate(postPredBLM1[, 3:4], list(postPredBLM1$D47Pred, postPredBLM1$D47Prederror), mean)
   
-  return(postPredBLM1)
 }

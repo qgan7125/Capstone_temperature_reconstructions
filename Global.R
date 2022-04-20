@@ -27,3 +27,6 @@ function_url = c("https://raw.githubusercontent.com/Tripati-Lab/BayClump/main/Fu
                  "https://raw.githubusercontent.com/Tripati-Lab/BayClump/main/Functions/Predictions_nonBayesian.R",
                  "https://raw.githubusercontent.com/Tripati-Lab/BayClump/main/Functions/Calibration_BayesianNonBayesian.R")
 sapply(function_url, source)
+
+# functions locally
+sapply(list.files('Functions', full.names = T), source)
