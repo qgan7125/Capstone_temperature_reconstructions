@@ -23,8 +23,8 @@ library(greekLetters)
 There are three data sets with low, intermediate, and high errors.
 ```{r}
 data_low <- read_csv("../Data/Dataset_S1_Mar8.csv")
-data_intermediate <- read_csv("../Data/Dataset_S2_Mar8.csv")
-data_high <- read_csv("../Data/Dataset_S3_Mar8.csv")
+data_intermediate <- read_csv("../Data/Dataset_S2_Apr20_V2.csv")
+data_high <- read_csv("../Data/Dataset_S3_Apr20_V2.csv")
 ```
 
 ## The functions for bootstrapping 1000 replicates with York models
@@ -120,7 +120,7 @@ using the least-squares algorithm of York.
 
 ### Low error data
 ```{r}
-york_result_low <- model(1234, York_model, data_low, D47~Temperature, 1000)
+york_result_low <- model(3, York_model, data_low, D47~Temperature, 1000)
 
 rbind(york_result_low) %>% kable()
 ```
@@ -138,7 +138,7 @@ createPlot(data_low,
 
 ### Intermediate error data
 ```{r}
-york_result_intermediate <- model(1234, York_model, data_intermediate, D47~Temperature, 1000)
+york_result_intermediate <- model(3, York_model, data_intermediate, D47~Temperature, 1000)
 
 rbind(york_result_intermediate) %>% kable()
 ```
@@ -157,7 +157,7 @@ createPlot(data_intermediate,
 
 ### High error data
 ```{r}
-york_result_high <- model(1234, York_model, data_high, D47~Temperature, 1000)
+york_result_high <- model(3, York_model, data_high, D47~Temperature, 1000)
 
 rbind(york_result_high) %>% kable()
 ```
@@ -187,7 +187,7 @@ Find the MLE line relating x and y when both are measured with error. When the v
 
 ### Low error data
 ```{r}
-deming_result_low <- model(1234, Deming_model, data_low, D47~Temperature, 1000)
+deming_result_low <- model(3, Deming_model, data_low, D47~Temperature, 1000)
 
 rbind(deming_result_low) %>% kable()
 
@@ -207,7 +207,7 @@ createPlot(data_low,
 
 ### Intermediate error data
 ```{r}
-deming_result_intermediate <- model(1234, Deming_model, data_intermediate, D47~Temperature, 1000)
+deming_result_intermediate <- model(3, Deming_model, data_intermediate, D47~Temperature, 1000)
 
 rbind(deming_result_intermediate) %>% kable()
 ```
@@ -226,7 +226,7 @@ createPlot(data_intermediate,
 
 ### High error data
 ```{r}
-deming_result_high <- model(1234, Deming_model, data_high, D47~Temperature, 1000)
+deming_result_high <- model(3, Deming_model, data_high, D47~Temperature, 1000)
 
 rbind(deming_result_high) %>% kable()
 ```

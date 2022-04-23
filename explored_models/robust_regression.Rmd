@@ -24,8 +24,8 @@ library(boot)
 There are three data sets with low, intermediate, and high errors.
 ```{r}
 data_low <- read_csv("../Data/Dataset_S1_Mar8.csv")
-data_intermediate <- read_csv("../Data/Dataset_S2_Mar8.csv")
-data_high <- read_csv("../Data/Dataset_S3_Mar8.csv")
+data_intermediate <- read_csv("../Data/Dataset_S2_Apr20_V2.csv")
+data_high <- read_csv("../Data/Dataset_S3_Apr20_V2.csv")
 ```
 
 ## The helper functions for bootstrapping 1000 replicates with robust regression models and data visulization.
@@ -169,3 +169,4 @@ plot_high
 ```{r}
 rbind(result_low, result_intermediate, result_high) %>% kable()
 ```
+

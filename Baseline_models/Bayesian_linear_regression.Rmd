@@ -22,8 +22,8 @@ options(mc.cores = parallel::detectCores())
 There are three data sets with low, intermediate, and high errors.
 ```{r}
 data_low <- read_csv("../Data/Dataset_S1_Mar8.csv")
-data_intermediate <- read_csv("../Data/Dataset_S2_Mar8.csv")
-data_high <- read_csv("../Data/Dataset_S3_Mar8.csv")
+data_intermediate <- read_csv("../Data/Dataset_S2_Apr20_V2.csv")
+data_high <- read_csv("../Data/Dataset_S3_Apr20_V2.csv")
 ```
 
 ## Bayesian linear regression
@@ -249,21 +249,5 @@ createPlot(data_high,
 rbind(results_low, results_intermediate, results_high) %>% kable()
 ```
 
-```{r}
 
-  rstan_options(auto_write = TRUE)
-  stan_date <- list(N = nrow(data_low), 
-                        Temperature = data_low$Temperature, 
-                        Temperature_true = data_low$x_TRUE,
-                        Temperature_error = abs(data_low$TempError),
-                        D47 = data_low$D47,
-                        D47_true = data_low$y_TRUE,
-                        D47_error = abs(data_low$D47error),
-                        y_new = rnorm(1000, 0.6, 0.05))
-  
-  Bayesian_model <- stan(file = "./stan/prediction.stan", data = stan_date, iter = 1000, chains = 4, seed = 3)
-  
-  Bayesian_result <- rstan::extract(Bayesian_model)
-  Bayesian_result$y_new
-```
 

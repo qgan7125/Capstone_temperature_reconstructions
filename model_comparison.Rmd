@@ -15,7 +15,7 @@ source("Global.R")
 ## load data in
 We only need 50 points for comparison.
 ```{r}
-set.seed(123)
+set.seed(3)
 mark <- sample(nrow(data_intermediate), 50, replace = FALSE)
 data_50 <- data_intermediate[mark, ]
 
@@ -41,13 +41,13 @@ createPlot <- function(data, result, cals, title, caption, model) {
                                 fill = "white", alpha =  .9) + 
     annotate("text",
              x = 18.5,
-             y = 0.55,
+             y = 0.6,
              hjust = 1,
              label = paste(greeks("beta"), "=",round(cals$beta[1], 4), "( 95% CI", round(cals$beta[2], 4),"-", round(cals$beta[3],4), ")\n",
                           greeks("alpha"), "=", round(cals$alpha[1], 4), "( 95% CI", round(cals$alpha[2], 4),"-", round(cals$alpha[3],4), ")")) +
     annotate("text",
              x = 5,
-             y = 0.9,
+             y = 0.95,
              hjust = 0,
              label = model) +
     labs(title = title,
@@ -183,7 +183,7 @@ TS_plot <- createPlot(data_50,
            TScals,
            "", 
            "",
-           bquote(paste(bold("H. "), "Theil-sen regression")))
+           bquote(paste(bold("I. "), "Theil-sen regression")))
 
 TS_plot
 ```

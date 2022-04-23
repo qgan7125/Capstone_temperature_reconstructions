@@ -19,9 +19,9 @@ library(patchwork)
 ## load data in
 There are three data sets with low, intermediate, and high errors.
 ```{r}
-data_low <- read_csv("Dataset_S1_Mar8.csv")
-data_intermediate <- read_csv("Dataset_S2_Apr20_V2.csv")
-data_high <- read_csv("Dataset_S3_Apr20_V2.csv")
+data_low <- read.csv("./Dataset_S1_Mar8.csv")
+data_intermediate <- read.csv("./Dataset_S2_Apr20_V2.csv")
+data_high <- read.csv("./Dataset_S3_Apr20_V2.csv")
 ```
 
 ```{r}

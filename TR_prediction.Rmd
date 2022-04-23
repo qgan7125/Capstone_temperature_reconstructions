@@ -6,75 +6,10 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 source("Global.R")
-source("./Functions/Prediction_non_bayesian.R")
 ```
 
-## helper functions for new models
-```{r}
-simulateODR_measured <- function(data, 
-                                   replicates, 
-                                   samples = NULL, 
-                                   D47error = "D47error"){
-  do.call(rbind,lapply(1:replicates, function(x){
-    dataSub <- data[sample(seq_along(data[,1]), if(is.null(samples)){nrow(data)}else{samples}, replace = T),]
-    Reg <- odregress(dataSub$Temperature, dataSub$D47)
-    cbind.data.frame("alpha"=Reg$coeff[2],"beta"=Reg$coeff[1])
-  }))
-}
-
-simulateQR_measured <- function(data, 
-                                   replicates, 
-                                   samples = NULL, 
-                                   D47error = "D47error"){
-  do.call(rbind,lapply(1:replicates, function(x){
-    dataSub <- data[sample(seq_along(data[,1]), if(is.null(samples)){nrow(data)}else{samples}, replace = T),]
-    Reg <- rq(D47 ~ Temperature, data = dataSub)
-    cbind.data.frame("alpha"=Reg$coeff[1],"beta"=Reg$coeff[2])
-  }))
-}
-
-simulateRLM_measured <- function(data, 
-                                   replicates, 
-                                   samples = NULL, 
-                                   D47error = "D47error"){
-  do.call(rbind,lapply(1:replicates, function(x){
-    dataSub <- data[sample(seq_along(data[,1]), if(is.null(samples)){nrow(data)}else{samples}, replace = T),]
-    Reg <- rlm(D47 ~ Temperature, data = dataSub)
-    cbind.data.frame("alpha"=Reg$coeff[1],"beta"=Reg$coeff[2])
-  }))
-}
-
-simulateTS_measured <- function(data, 
-                                   replicates, 
-                                   samples = NULL, 
-                                   D47error = "D47error"){
-  do.call(rbind,lapply(1:replicates, function(x){
-    dataSub <- data[sample(seq_along(data[,1]), if(is.null(samples)){nrow(data)}else{samples}, replace = T),]
-    Reg <- theilsen(D47 ~ Temperature, data = dataSub)
-    cbind.data.frame("alpha"=Reg$coeff[1],"beta"=Reg$coeff[2])
-  }))
-}
-
-simulateLSMC_measured <- function(data, 
-                                   replicates, 
-                                   samples = NULL, 
-                                   D47error = "D47error"){
-  do.call(rbind,lapply(1:replicates, function(x){
-    dataSub <- data.frame(rep(0, nrow(data)))
-    dataSub$Temperature <- rnorm(if(is.null(samples)){nrow(data)}else{samples}, 
-                                data$x_TRUE,
-                                sd(data$TempError))
-    dataSub$D47 <- rnorm(if(is.null(samples)){nrow(data)}else{samples}, 
-                            data$y_TRUE,
-                            sd(data$D47error))
-    Reg <- lm(D47 ~ Temperature, data = dataSub)
-    cbind.data.frame("alpha"=Reg$coeff[1],"beta"=Reg$coeff[2])
-  }))
-}
-
-```
 
 ## get the model coefficient
 ```{r}
@@ -110,10 +45,12 @@ getCals <- function(data,
 
 ## Coefficient
 ```{r}
+set.seed(3)
 lowCoef <<- getCals(data_low, 1000)
 intermediateCoef <<- getCals(data_intermediate, 1000)
 highCoef <<- getCals(data_high, 1000)
 ```
+
 
 ##reconstruction
 ```{r}
@@ -131,8 +68,8 @@ AllRec <- function(data, recData, cals){
   yorkrc <- calRec(data, recData, cals$yorkcals)
   demingrc <- calRec(data, recData, cals$demingcals)
   BLM1calsMatrix <- cals$bayeslincals$BLM1_fit$BUGSoutput$sims.matrix
-  BLM1cal <- cbind.data.frame(alpha = BLM1cals[,1],
-                              beta = BLM1cals[,2])
+  BLM1cal <- cbind.data.frame(alpha = BLM1calsMatrix[,1],
+                              beta = BLM1calsMatrix[,2])
   BLM_norc <-calRec(data, recData, BLM1cal)
   BLMrc <- BayesianPredictions(cals$bayeslincals, recData$D47, abs(recData$D47error), 1)
   names(BLMrc) <- c("D47", "D47se", "Tc", "se")
@@ -154,13 +91,6 @@ AllRec <- function(data, recData, cals){
                    TSrc)
 }
 
-drawGraph <- function(data, miny, maxy) {
-    ggplot(data, aes(x = name, y = se, fill = name)) +
-    geom_col() +
-    geom_text(aes(label=round(se, 4)), position=position_dodge(width=0.9), vjust=-0.25) +
-    coord_cartesian(ylim=c(miny, maxy)) +
-    theme(plot.title = element_text(size=10))
-}
 
 names = c("OLS",
           "york",
@@ -175,32 +105,180 @@ names = c("OLS",
 
 ```
 
-
-
-
 ```{r, fig.align='center', fig.width=10, fig.height=11}
-D47 <- 0.6
-D47error <-0.02
-recData <- data.frame(D47 = D47,
+inverted <- function(D47, D47error, trueTemp){
+  recData <- data.frame(D47 = D47,
                       D47error = D47error)
 
-data_low$T2 <- data_low$Temperature
-lowResult <- AllRec(data_low, recData, lowCoef)
-lowResult$name = names
-lowgraph <- drawGraph(lowResult, min(lowResult$se), max(lowResult$se))
+  lowResult <- AllRec(data_low, recData, lowCoef)
+  lowResult$name = names
+  lowResult$dataset <- rep("low_error", nrow(lowResult))
+  lowResult$accuracy <- lowResult$Tc - trueTemp
+  
+  intermediateResult <- AllRec(data_intermediate, recData, intermediateCoef)
+  intermediateResult$name = names
+  intermediateResult$dataset <- rep("intermediate_error", nrow(intermediateResult))
+  intermediateResult$accuracy <- intermediateResult$Tc - trueTemp
+  
+  highResult <- AllRec(data_high, recData, highCoef)
+  highResult$name = names
+  highResult$dataset <- rep("high_error", nrow(highResult))
+  highResult$accuracy <- highResult$Tc - trueTemp
+  
+  rbind.data.frame(lowResult, intermediateResult, highResult)
+}
 
-data_intermediate$T2 <- data_intermediate$Temperature
-intermediateResult <- AllRec(data_intermediate, recData, intermediateCoef)
-intermediateResult$name = names
-intermediategraph <- drawGraph(intermediateResult, min(intermediateResult$se), max(intermediateResult$se))
-
-data_high$T2 <- data_high$Temperature
-highResult <- AllRec(data_high, recData, highCoef)
-highResult$name = names
-highgraph <- drawGraph(highResult, min(highResult$se), max(highResult$se))
-
-lowgraph / intermediategraph / highgraph
 ```
+
+
+```{r}
+lowError_D47 <- inverted(0.6, 0.005, 60)
+intermediateError_D47 <- inverted(0.6, 0.01, 60)
+highError_D47 <- inverted(0.6, 0.02, 60)
+```
+
+
+```{r, fig.align='center', fig.width=8, fig.height=10}
+rbind(lowError_D47, intermediateError_D47,highError_D47) %>% 
+  ggplot(aes(x = as.factor(D47se), y = se, color = name),
+         size=25) + 
+  geom_line(aes(group = name),
+            size=1,
+             position = "identity") +
+  geom_point() +
+  facet_wrap(~factor(dataset,
+                     levels = c("low_error", "intermediate_error", "high_error")), 
+             ncol= 1,
+             scales = "free") + 
+  scale_colour_brewer(palette = "Paired") +
+  labs(x = "D47 error",
+       y = "Precision",
+       color = "Model names",
+       title = "High-temperature carbonate",
+       subtitle = expression(paste("Targe D47=", "0.6%"["o"], "True Temperature =", "60"^"0", "C")))
+```
+
+
+```{r, fig.align='center', fig.width=8, fig.height=11}
+rbind(lowError_D47, intermediateError_D47, highError_D47) %>% 
+    dplyr::group_by(name, dataset) %>% 
+    dplyr::summarise(model_accuracy = mean(accuracy)) %>% 
+    ggplot(aes(x = name, y = model_accuracy, fill = name)) +
+    geom_col() +
+    geom_text(aes(label=round(model_accuracy, 4)),
+              position=position_dodge(width=0.9), 
+              vjust=-0.25) +
+    scale_fill_brewer(palette = "Paired") +
+    facet_wrap(~factor(dataset,
+                     levels = c("low_error", "intermediate_error", "high_error")), 
+               ncol= 1,
+               scale = "free")  + 
+    labs(x = "Model Names",
+       y = "Accuracy",
+       color = "Model names",
+       title = "High-temperature carbonate",
+       subtitle = expression(paste("Targe D47=", "0.6%"["o"], "True Temperature =", "60"^"0", "C")))
+```
+
+```{r}
+lowError_D47 <- inverted(0.7, 0.005, 19)
+intermediateError_D47 <- inverted(0.6, 0.01, 19)
+highError_D47 <- inverted(0.7, 0.02, 19)
+```
+
+
+```{r, fig.align='center', fig.width=8, fig.height=10}
+rbind(lowError_D47, intermediateError_D47,highError_D47) %>% 
+  ggplot(aes(x = as.factor(D47se), y = se, color = name),
+         size=25) + 
+  geom_line(aes(group = name),
+            size=1,
+             position = "identity") +
+  geom_point() +
+  facet_wrap(~factor(dataset,
+                     levels = c("low_error", "intermediate_error", "high_error")), 
+             ncol= 1,
+             scales = "free") + 
+  scale_colour_brewer(palette = "Paired") +
+  labs(x = "D47 error",
+       y = "Precision",
+       color = "Model names",
+       title = "Intermediate-temperature carbonate",
+       subtitle = expression(paste("Targe D47=", "0.7%"["o"], "True Temperature =", "19"^"0", "C")))
+```
+
+```{r, fig.align='center', fig.width=8, fig.height=11}
+rbind(lowError_D47, intermediateError_D47,highError_D47) %>% 
+    dplyr::group_by(name, dataset) %>% 
+    dplyr::summarise(model_accuracy = mean(accuracy)) %>% 
+    ggplot(aes(x = name, y = model_accuracy, fill = name)) +
+    geom_col() +
+    geom_text(aes(label=round(model_accuracy, 4)),
+              position=position_dodge(width=0.9), 
+              vjust=-0.25) +
+    scale_fill_brewer(palette = "Paired") +
+    facet_wrap(~factor(dataset,
+                     levels = c("low_error", "intermediate_error", "high_error")), 
+               ncol= 1,
+               scale = "free") + 
+    labs(x = "Model Names",
+       y = "Accuracy",
+       color = "Model names",
+       title = "Intermediate-temperature carbonate",
+       subtitle = expression(paste("Targe D47=", "0.7%"["o"], "True Temperature =", "19"^"0", "C")))
+```
+
+```{r}
+lowError_D47 <- inverted(0.8, 0.005, -9.8)
+intermediateError_D47 <- inverted(0.8, 0.01, -9.8)
+highError_D47 <- inverted(0.8, 0.02, -9.8)
+```
+
+
+```{r, fig.align='center', fig.width=8, fig.height=10}
+rbind(lowError_D47, intermediateError_D47,highError_D47) %>% 
+  ggplot(aes(x = as.factor(D47se), y = se, color = name),
+         size=25) + 
+  geom_line(aes(group = name),
+            size=1,
+             position = "identity") +
+  geom_point() +
+  facet_wrap(~factor(dataset,
+                     levels = c("low_error", "intermediate_error", "high_error")), 
+             ncol= 1,
+             scales = "free") + 
+  scale_colour_brewer(palette = "Paired") +
+  labs(x = "D47 error",
+       y = "Precision",
+       color = "Model names",
+       title = "Low-temperature carbonate",
+       subtitle = expression(paste("Targe D47=", "0.8%"["o"], "True Temperature =", "-9.8"^"0", "C")))
+```
+
+```{r, fig.align='center', fig.width=8, fig.height=12}
+rbind(lowError_D47, intermediateError_D47,highError_D47) %>% 
+    dplyr::group_by(name, dataset) %>% 
+    dplyr::summarise(model_accuracy = mean(accuracy)) %>% 
+    ggplot(aes(x = name, y = model_accuracy, fill = name)) +
+    geom_col() +
+    geom_text(aes(label=round(model_accuracy, 4)),
+              position=position_dodge(width=0.9), 
+              vjust=-0.25) +
+    scale_fill_brewer(palette = "Paired") +
+    facet_wrap(~factor(dataset,
+                     levels = c("low_error", "intermediate_error", "high_error")), 
+               ncol= 1,
+               scale = "free") +
+      labs(x = "Model Names",
+       y = "Accuracy",
+       color = "Model names",
+       title = "Low-temperature carbonate",
+       subtitle = expression(paste("Targe D47=", "0.8%"["o"], "True Temperature =", "-9.8"^"0", "C")))
+```
+
+
+
+
 
 
 

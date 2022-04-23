@@ -22,8 +22,8 @@ library(greekLetters)
 There are three data sets with low, intermediate, and high errors.
 ```{r}
 data_low <- read_csv("../Data/Dataset_S1_Mar8.csv")
-data_intermediate <- read_csv("../Data/Dataset_S2_Mar8.csv")
-data_high <- read_csv("../Data/Dataset_S3_Mar8.csv")
+data_intermediate <- read_csv("../Data/Dataset_S2_Apr20_V2.csv")
+data_high <- read_csv("../Data/Dataset_S3_Apr20_V2.csv")
 ```
 
 ## The helper functions for bootstrapping 1000 replicates with OLS models and data visulization.
@@ -167,41 +167,15 @@ plot_high
 ```{r}
 rbind(result_low, result_intermediate, result_high) %>% kable()
 ```
-```{r}
-set.seed(3)
-lm(D47~Temperature, data = data_low)
-```
 
-```{r}
-lm(D47~Temperature, data = data_intermediate)
-```
-```{r}
-lm(D47~Temperature, data = data_high)
-```
 
-```{r}
 
-set.seed((3))
-boot(data = data_low,
-                  statistic = OLS_boot,
-                  R = 100,
-                  formula =  D47~Temperature)
-```
-```{r}
-set.seed((3))
-boot(data = data_intermediate,
-                  statistic = OLS_boot,
-                  R = 100,
-                  formula =  D47~Temperature)
-```
 
-```{r}
-set.seed((3))
-boot(data = data_high,
-                  statistic = OLS_boot,
-                  R = 100,
-                  formula =  D47~Temperature)
-```
+
+
+
+
+
 
 By the OLS model, we could know when there is a low error in the data. The OLS 
 could produce the slope and intercept close to the true parameters but with the 
