@@ -159,7 +159,7 @@ rbind(lowError_D47, intermediateError_D47,highError_D47) %>%
 ```
 
 
-```{r, fig.align='center', fig.width=8, fig.height=11}
+```{r, fig.align='center', fig.width=8, fig.height=12}
 rbind(lowError_D47, intermediateError_D47, highError_D47) %>% 
     dplyr::group_by(name, dataset) %>% 
     dplyr::summarise(model_accuracy = mean(accuracy)) %>% 
@@ -182,7 +182,7 @@ rbind(lowError_D47, intermediateError_D47, highError_D47) %>%
 
 ```{r}
 lowError_D47 <- inverted(0.7, 0.005, 19)
-intermediateError_D47 <- inverted(0.6, 0.01, 19)
+intermediateError_D47 <- inverted(0.7, 0.01, 19)
 highError_D47 <- inverted(0.7, 0.02, 19)
 ```
 
