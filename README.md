@@ -17,6 +17,8 @@ True intercept: 0.268
 ## Baseline Models (Due: February 25<sub>th</sub>)
 ***Ordinary least squares linear regression***：OLS is for estimating coefficients of linear regression that describe the relationship between one or more independent variables and one dependent variable. 
 
+***York Regression***: An errors-in-variables model.
+
 ***Deming regression***：An errors-in-variables model which tries to find the line of best fit for a two-dimensional dataset. 
 
 ***Bayesian linear model***：Bayesian linear model estimates and updates regression parameters based on prior studies and newly generated clumped isotope data.
@@ -24,12 +26,14 @@ True intercept: 0.268
 ## New Explored Models (Due: March 15<sub>th</sub>)
 ***Orthogonal distance regression models*** ：Finding the maximum likelihood estimators of parameters in measurement error models in the case of normally distributed errors.
 
-***Theil-Sen regression***：A non-parametric method which means it makes no assumption about the underlying distribution of the data. The estimation of the model is done by calculating the slopes and intercepts of a subpopulation of all possible combinations of p subsample points.
-
-***Huber Regression***：A regression model that is robust to outliers. The idea is to use different loss functions rather than the traditional least squares.
-
-***Elastic-net regression***: A linear regression model using combinations of two popular penalties, specifically the L1 and L2 penalty functions.
+***Least Square Monte Carlo***：A non-parametric method which means it makes no assumption about the underlying distribution of the data. The estimation of the model is done by calculating the slopes and intercepts of a subpopulation of all possible combinations of p subsample points.
 
 ***Quantile Regression***: Estimates the median or other quantiles of y conditional on x, while ordinary least squares (OLS) estimates the conditional mean.
 
-***Generalized Linear Regression***: a flexible generalization of ordinary linear regression. The GLM generalized linear regression by allowing the linear model to be related to the response variable via a link function and by allowing the magnitude of the variance of each measurement to be a function of its predicted value.
+***Robust Regression***: The iterated reweighted least squares is used to solve certain optimization problems with objective functions of the form of a p-norm.
+
+***Theil-sen Regression***:
+
+
+## Final Report
+[Exploring alternative methods for reconstructing temperatures using the clumped isotopes paleothermometer](./Capstone.pdf)
